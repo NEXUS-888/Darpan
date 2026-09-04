@@ -9,7 +9,7 @@ import time
 from typing import Optional, Dict, Any
 
 from .face_engine import FaceEngine, ProcessedFace
-from .social_search import SearchGateway, SocialMatch
+from .social_search import SearchGateway, SocialMatch, SearchResult
 from .hasher import (
     canonicalize_json,
     compute_face_hash,
@@ -51,7 +51,7 @@ class VeriFacePipeline:
         """
         Executes the complete 4-stage pipeline:
         1. Biometric face detection & normalized crop
-        2. Open-web social media discovery
+        2. Multi-platform open-web social media discovery
         3. Canonical cryptographic commitment hashing
         4. On-chain blockchain recordation & immediate verification check
         """
@@ -65,8 +65,10 @@ class VeriFacePipeline:
         print(f"  [+] Face Keccak-256 Hash: {processed_face.face_hash}")
 
         print(f"\n[Stage 2/4] Searching web & social media for matching identity...")
-        social_match: SocialMatch = self.search_gateway.search(crop_path)
-        print(f"  [+] Found matching post on platform: {social_match.platform}")
+        search_res: SearchResult = self.search_gateway.search_all(crop_path)
+        social_match: SocialMatch = search_res.primary_match
+        print(f"  [+] Discovered matches across {search_res.total_platforms} platforms: {', '.join(search_res.platforms_found)}")
+        print(f"  [+] Primary post on: {social_match.platform}")
         print(f"  [+] Author: {social_match.author_handle}")
         print(f"  [+] Post URL: {social_match.post_url}")
         print(f"  [+] Snippet: {social_match.snippet[:80]}...")
@@ -111,6 +113,11 @@ class VeriFacePipeline:
                 "confidence": processed_face.confidence,
             },
             "discovered_social_post": canonical_metadata,
+            "social_discovery_summary": {
+                "total_platforms": search_res.total_platforms,
+                "platforms_found": search_res.platforms_found,
+                "all_matches": [m.to_canonical_dict() for m in search_res.all_matches],
+            },
             "cryptography": {
                 "face_hash": processed_face.face_hash,
                 "metadata_hash": metadata_hash,
