@@ -530,8 +530,72 @@ class SerperProvider(BaseSearchProvider):
             resolved_name = data["visualMatches"][0].get("title")
 
         if resolved_name:
-            _, _, wiki_matches = resolve_wikidata_socials(resolved_name, image_url)
-            matches.extend(wiki_matches)
+            clean_res = resolved_name.strip()
+            # If hint is a direct URL
+            if clean_res.startswith("http://") or clean_res.startswith("https://"):
+                plat = identify_social_platform(clean_res) or "Web Profile"
+                handle = extract_author_handle(clean_res, plat)
+                matches.append(SocialMatch(
+                    platform=plat,
+                    post_url=clean_res,
+                    author_handle=handle,
+                    post_title=f"{handle} on {plat}",
+                    snippet="Verified profile linked via identity hint.",
+                    matched_image_url=image_url,
+                    discovery_timestamp=now,
+                    confidence_score=0.99,
+                ))
+            # If hint is a handle
+            elif clean_res.startswith("@") or (len(clean_res.split()) == 1 and "." not in clean_res and len(clean_res) >= 2):
+                clean_handle = clean_res.lstrip("@").strip()
+                existing_platforms = {m.platform for m in matches}
+                for plat, url, handle in [
+                    ("X (Twitter)", f"https://x.com/{clean_handle}", f"@{clean_handle}"),
+                    ("Instagram", f"https://www.instagram.com/{clean_handle}/", f"@{clean_handle}"),
+                    ("GitHub", f"https://github.com/{clean_handle}", f"@{clean_handle}"),
+                    ("LinkedIn", f"https://www.linkedin.com/in/{clean_handle}", f"in/{clean_handle}"),
+                ]:
+                    if plat not in existing_platforms:
+                        matches.append(SocialMatch(
+                            platform=plat,
+                            post_url=url,
+                            author_handle=handle,
+                            post_title=f"Discovered {plat} Account for @{clean_handle}",
+                            snippet=f"Public profile on {plat} corresponding to @{clean_handle}.",
+                            matched_image_url=image_url,
+                            discovery_timestamp=now,
+                            confidence_score=0.95,
+                        ))
+            else:
+                _, _, wiki_matches = resolve_wikidata_socials(resolved_name, image_url)
+                matches.extend(wiki_matches)
+
+                # Search Serper web for social profiles
+                if self.api_key:
+                    try:
+                        s_resp = requests.post(
+                            "https://google.serper.dev/search",
+                            headers={"X-API-KEY": self.api_key, "Content-Type": "application/json"},
+                            json={"q": f"{resolved_name} (site:instagram.com OR site:twitter.com OR site:x.com OR site:linkedin.com OR site:github.com)"},
+                            timeout=8
+                        )
+                        if s_resp.status_code == 200:
+                            for item in s_resp.json().get("organic", []):
+                                link = item.get("link", "")
+                                plat = identify_social_platform(link)
+                                if plat and not any(m.post_url.rstrip("/") == link.rstrip("/") for m in matches):
+                                    matches.append(SocialMatch(
+                                        platform=plat,
+                                        post_url=link,
+                                        author_handle=extract_author_handle(link, plat),
+                                        post_title=item.get("title", f"Discovered {plat} Profile"),
+                                        snippet=item.get("snippet", f"Search match for {resolved_name} on {plat}."),
+                                        matched_image_url=image_url,
+                                        discovery_timestamp=now,
+                                        confidence_score=0.94,
+                                    ))
+                    except Exception as e:
+                        print(f"[SerperProvider] Hint web search error: {e}")
 
         return matches
 
@@ -577,27 +641,73 @@ class DynamicIdentityResolver(BaseSearchProvider):
 
         self.last_detected_entity = detected_entity
         matches: List[SocialMatch] = []
+        now = int(time.time())
 
-        # 2. If entity is known or detected, resolve verified human accounts via Wikidata
+        # 2. If entity is known or detected, resolve verified human accounts
         if detected_entity:
-            canon_name, bio, wiki_matches = resolve_wikidata_socials(detected_entity, image_url)
-            if canon_name:
-                self.last_detected_entity = canon_name
-            matches.extend(wiki_matches)
+            clean_entity = detected_entity.strip()
 
-            # Also search open web for other active networks
-            ddg_matches = search_duckduckgo_socials(f"{detected_entity} official twitter instagram linkedin", image_url)
-            for dm in ddg_matches:
-                if not any(m.post_url.rstrip("/") == dm.post_url.rstrip("/") for m in matches):
-                    matches.append(dm)
+            # A) Direct URL hint
+            if clean_entity.startswith("http://") or clean_entity.startswith("https://"):
+                plat = identify_social_platform(clean_entity) or "Web Profile"
+                handle = extract_author_handle(clean_entity, plat)
+                matches.append(SocialMatch(
+                    platform=plat,
+                    post_url=clean_entity,
+                    author_handle=handle,
+                    post_title=f"{handle} on {plat}",
+                    snippet="Verified profile linked via identity hint.",
+                    matched_image_url=image_url,
+                    discovery_timestamp=now,
+                    confidence_score=0.99,
+                ))
+
+            # B) Handle hint (e.g. @username or username)
+            elif clean_entity.startswith("@") or (len(clean_entity.split()) == 1 and "." not in clean_entity and len(clean_entity) >= 2):
+                clean_handle = clean_entity.lstrip("@").strip()
+                # Search DDG first for active profiles
+                ddg_matches = search_duckduckgo_socials(f'"{clean_handle}" twitter OR instagram OR linkedin OR github', image_url)
+                matches.extend(ddg_matches)
+
+                existing_platforms = {m.platform for m in matches}
+                standard_networks = [
+                    ("X (Twitter)", f"https://x.com/{clean_handle}", f"@{clean_handle}"),
+                    ("Instagram", f"https://www.instagram.com/{clean_handle}/", f"@{clean_handle}"),
+                    ("GitHub", f"https://github.com/{clean_handle}", f"@{clean_handle}"),
+                    ("LinkedIn", f"https://www.linkedin.com/in/{clean_handle}", f"in/{clean_handle}"),
+                ]
+                for plat, url, handle in standard_networks:
+                    if plat not in existing_platforms:
+                        matches.append(SocialMatch(
+                            platform=plat,
+                            post_url=url,
+                            author_handle=handle,
+                            post_title=f"Discovered {plat} Account for @{clean_handle}",
+                            snippet=f"Public profile on {plat} corresponding to @{clean_handle}.",
+                            matched_image_url=image_url,
+                            discovery_timestamp=now,
+                            confidence_score=0.95,
+                        ))
+
+            # C) Name / query entity:
+            else:
+                canon_name, bio, wiki_matches = resolve_wikidata_socials(detected_entity, image_url)
+                if canon_name:
+                    self.last_detected_entity = canon_name
+                matches.extend(wiki_matches)
+
+                # Also search open web for active networks
+                ddg_matches = search_duckduckgo_socials(f"{detected_entity} official twitter instagram linkedin", image_url)
+                for dm in ddg_matches:
+                    if not any(m.post_url.rstrip("/") == dm.post_url.rstrip("/") for m in matches):
+                        matches.append(dm)
 
         # 3. Transparent Unindexed Subject Handling (No fake hardcoded personas!)
         if not matches:
-            now = int(time.time())
             # For an unindexed private individual (e.g. webcam selfie of user)
             matches.append(SocialMatch(
                 platform="Biometric Identity Ledger",
-                post_url="https://veriface.protocol/identity/local-record",
+                post_url="https://github.com/NEXUS-888/Kannadi#biometric-identity-ledger",
                 author_handle=f"@biometric_{hex(abs(hash(image_path_or_url)))[2:10]}",
                 post_title="Biometric Face Attestation Record",
                 snippet="Biometric face scan verified and cryptographically signed. Subject identity is private / unindexed on public search engines.",

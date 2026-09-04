@@ -362,9 +362,9 @@ with tab_exec:
                 st.image(image_path, caption="Sample Evaluation Image (demo_face.jpg)", width=240)
 
         subject_hint_input = st.text_input(
-            "🔍 Identity Name / Handle Hint (Optional)",
-            placeholder="e.g. Cristiano Ronaldo (or leave blank for auto visual reverse discovery)",
-            help="If left blank, VeriFace automatically recognizes public faces using Bing Visual Search and Google Lens."
+            "🔍 Identity Name, Handle, or Profile URL (Optional)",
+            placeholder="e.g. @your_username, Cristiano Ronaldo, or https://instagram.com/...",
+            help="Provide your name, social handle (e.g. @username), or profile URL to link your verified social media accounts."
         )
 
     with col_action:
@@ -508,17 +508,22 @@ with tab_exec:
         with col_b2:
             post = rc["discovered_social_post"]
             all_m = summary.get("all_matches", [])
+            is_unindexed = (
+                post.get("platform") == "Biometric Identity Ledger"
+                or "biometric-identity-ledger" in post.get("post_url", "")
+                or "veriface.protocol" in post.get("post_url", "")
+            )
 
             st.markdown(f"""
             <div class="bento-card">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h4 style="margin: 0; font-size: 1rem; color: #F8FAFC;">2. Social Discovery</h4>
-                        <span class="chip-platform">Found: {total_platforms} Networks</span>
+                        <span class="chip-platform">{'Private Ledger' if is_unindexed else f'Found: {total_platforms} Networks'}</span>
                     </div>
             """, unsafe_allow_html=True)
 
-            if entity_name:
+            if entity_name and not is_unindexed:
                 st.markdown(f"""
                 <div style="background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -529,33 +534,76 @@ with tab_exec:
                 </div>
                 """, unsafe_allow_html=True)
 
-            st.markdown(f"""
+            if is_unindexed:
+                st.markdown(f"""
+                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="chip-green">🔒 Private Biometric Ledger</span>
+                            <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #34D399;">On-Chain Anchored</span>
+                        </div>
+                        <h3 style="margin: 8px 0 2px 0; font-size: 1.15rem; color: #F8FAFC;">{post['author_handle']}</h3>
+                        <p style="margin: 0 0 6px 0; font-size: 0.85rem; color: #CBD5E1; font-weight: 500;">Zero Public Web Footprint</p>
+                        <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #94A3B8; line-height: 1.4;">
+                            Subject face is private and not indexed on public search engines. Biometric facial hash is cryptographically signed and permanently anchored to EVM Block #{rc['blockchain']['block_number']}.
+                        </p>
+                        <div style="background: rgba(2, 6, 23, 0.6); border-radius: 8px; padding: 8px 10px; font-size: 0.76rem; color: #94A3B8;">
+                            <strong>Attestation Status:</strong> <span style="color: #34D399;">✓ Verified On-Chain</span>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                with st.expander("🛡️ View Blockchain Verification & Audit Details", expanded=False):
+                    st.markdown(f"""
+                    <div style="font-size: 0.8rem; line-height: 1.6; color: #CBD5E1;">
+                        <div><strong>Attestation ID:</strong> <code style="font-size: 0.72rem;">{rc['cryptography']['attestation_id']}</code></div>
+                        <div><strong>Face Keccak-256:</strong> <code style="font-size: 0.72rem;">{rc['cryptography']['face_hash']}</code></div>
+                        <div><strong>Tx Hash:</strong> <code style="font-size: 0.72rem;">{rc['blockchain']['tx_hash']}</code></div>
+                        <div><strong>Smart Contract:</strong> <code style="font-size: 0.72rem;">{rc['blockchain']['contract_address']}</code></div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.download_button(
+                        "⬇️ Download Cryptographic Audit Receipt (JSON)",
+                        data=json.dumps(rc, indent=2),
+                        file_name="attestation_receipt.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
+
+                st.markdown("""
+                <div style="background: rgba(30, 41, 59, 0.5); border: 1px dashed rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 0.76rem; color: #94A3B8;">
+                    💡 <strong>Link to your personal social profiles:</strong><br/>
+                    Enter your name, handle (e.g. <code>@your_name</code>), or profile URL in the <em>Identity / Search Hint</em> input in Step 1 and run the pipeline again.
+                </div>
+                """, unsafe_allow_html=True)
+
+            else:
+                st.markdown(f"""
                     <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span class="chip-green">{post['platform']}</span>
-                            <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #38BDF8;">Conf: 98%</span>
+                            <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #38BDF8;">Conf: {int(post.get('confidence_score', 0.95)*100)}%</span>
                         </div>
                         <h3 style="margin: 8px 0 2px 0; font-size: 1.15rem; color: #F8FAFC;">{post['author_handle']}</h3>
                         <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: #CBD5E1; font-weight: 500;">{post['post_title']}</p>
                         <p style="margin: 0 0 12px 0; font-size: 0.8rem; color: #94A3B8; font-style: italic;">"{post['snippet']}"</p>
                         <a href="{post['post_url']}" target="_blank" class="btn-action">
-                            🔗 Open Primary Profile ({post['platform']})
+                            🔗 Open Primary Profile ({post['platform']}) ↗
                         </a>
                     </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-            if len(all_m) > 1:
-                st.markdown("<p style='margin: 8px 0 6px 0; font-size: 0.78rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;'>All Discovered Accounts & Links</p>", unsafe_allow_html=True)
-                for m in all_m:
-                    st.markdown(f"""
-                    <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <span class="chip-platform" style="font-size: 0.7rem; padding: 2px 6px;">{m['platform']}</span>
-                            <strong style="font-size: 0.84rem; margin-left: 8px; color: #F8FAFC;">{m['author_handle']}</strong>
+                if len(all_m) > 1:
+                    st.markdown("<p style='margin: 8px 0 6px 0; font-size: 0.78rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;'>All Discovered Accounts & Links</p>", unsafe_allow_html=True)
+                    for m in all_m:
+                        st.markdown(f"""
+                        <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span class="chip-platform" style="font-size: 0.7rem; padding: 2px 6px;">{m['platform']}</span>
+                                <strong style="font-size: 0.84rem; margin-left: 8px; color: #F8FAFC;">{m['author_handle']}</strong>
+                            </div>
+                            <a href="{m['post_url']}" target="_blank" style="color: #38BDF8; font-size: 0.8rem; text-decoration: none; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: rgba(56, 189, 248, 0.1);">Open ↗</a>
                         </div>
-                        <a href="{m['post_url']}" target="_blank" style="color: #38BDF8; font-size: 0.8rem; text-decoration: none; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: rgba(56, 189, 248, 0.1);">Open ↗</a>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
 
             st.markdown(f"""
                     <p style="margin: 12px 0 4px 0; font-size: 0.75rem; color: #94A3B8; text-transform: uppercase;">Canonical Metadata Hash (RFC 8785)</p>

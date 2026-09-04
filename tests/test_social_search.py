@@ -72,5 +72,34 @@ def test_search_gateway_unindexed_private_face():
     assert res is not None
     assert res.total_platforms == 1
     assert res.primary_match.platform == "Biometric Identity Ledger"
+    assert "veriface.protocol" not in res.primary_match.post_url
+    assert res.primary_match.post_url.startswith("https://")
     assert "tech_innovator" not in res.primary_match.author_handle
     assert "VishalG" not in res.primary_match.author_handle
+
+
+def test_search_gateway_url_hint():
+    gateway = SearchGateway(provider_type="auto")
+    res = gateway.search_all(
+        "samples/demo_face.jpg",
+        subject_hint="https://instagram.com/verified_creator"
+    )
+    assert res is not None
+    assert res.primary_match.platform == "Instagram"
+    assert res.primary_match.author_handle == "@verified_creator"
+    assert res.primary_match.post_url == "https://instagram.com/verified_creator"
+
+
+def test_search_gateway_handle_hint():
+    gateway = SearchGateway(provider_type="auto")
+    res = gateway.search_all(
+        "samples/demo_face.jpg",
+        subject_hint="@creator_user"
+    )
+    assert res is not None
+    assert res.total_platforms >= 3
+    assert any(m.author_handle == "@creator_user" for m in res.all_matches)
+    urls = [m.post_url for m in res.all_matches]
+    assert any("x.com/creator_user" in u for u in urls)
+    assert any("instagram.com/creator_user" in u for u in urls)
+
