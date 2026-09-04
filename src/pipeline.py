@@ -47,7 +47,7 @@ class VeriFacePipeline:
             private_key=private_key,
         )
 
-    def execute(self, image_path: str, subject_hint: Optional[str] = None) -> Dict[str, Any]:
+    def execute(self, image_path: str, subject_hint: Optional[str] = None, *args, **kwargs) -> Dict[str, Any]:
         """
         Executes the complete 4-stage pipeline:
         1. Biometric face detection & normalized crop
@@ -55,6 +55,8 @@ class VeriFacePipeline:
         3. Canonical cryptographic commitment hashing
         4. On-chain blockchain recordation & immediate verification check
         """
+        if subject_hint is None:
+            subject_hint = kwargs.get("subject_hint") or (args[0] if args else None)
         print(f"\n[Stage 1/4] Processing face scan from: {image_path}")
         crop_path = os.path.join(self.output_dir, "normalized_face_crop.png")
         processed_face: ProcessedFace = self.face_engine.process_image(

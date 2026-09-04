@@ -18,6 +18,12 @@ from PIL import Image
 # Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
+import importlib
+import src.social_search
+import src.pipeline
+importlib.reload(src.social_search)
+importlib.reload(src.pipeline)
+
 from src.pipeline import VeriFacePipeline
 from src.face_engine import FaceEngine
 from src.hasher import compute_face_hash, compute_metadata_hash, compute_attestation_id
