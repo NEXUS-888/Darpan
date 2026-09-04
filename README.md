@@ -124,6 +124,13 @@ python scripts/run_pipeline.py --image samples/demo_face.jpg
 [Audit Record] Complete cryptographic receipt written to: output\attestation_receipt.json
 ```
 
+### Step 3b: (Interactive Web Dashboard) Launch the Streamlit GUI
+If you prefer a visual user interface with image drag-and-drop, live side-by-side face cropping, on-chain transaction explorer, and an interactive tamper-evidence switch:
+```bash
+streamlit run app.py
+```
+This launches a browser dashboard at `http://localhost:8501`.
+
 ---
 
 ## 5. Independent Re-Verification & Tamper-Evidence Audit
