@@ -1,0 +1,11 @@
+# Core Dependencies for VeriFace Protocol
+web3>=7.0.0
+eth-tester>=0.12.0b1
+py-evm>=0.12.1b1
+opencv-python>=4.8.0
+pillow>=10.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+py-solc-x>=2.0.0
+pytest>=8.0.0
+numpy>=1.24.0

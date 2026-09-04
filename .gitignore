@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environments
+.env
+venv/
+env/
+ENV/
+
+# Output
+output/*.png
+output/*.json
+!samples/demo_face.jpg
+
+# IDE
+.vscode/
+.idea/
+*.swp
