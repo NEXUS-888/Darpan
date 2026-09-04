@@ -47,7 +47,7 @@ class VeriFacePipeline:
             private_key=private_key,
         )
 
-    def execute(self, image_path: str) -> Dict[str, Any]:
+    def execute(self, image_path: str, subject_hint: Optional[str] = None) -> Dict[str, Any]:
         """
         Executes the complete 4-stage pipeline:
         1. Biometric face detection & normalized crop
@@ -65,8 +65,11 @@ class VeriFacePipeline:
         print(f"  [+] Face Keccak-256 Hash: {processed_face.face_hash}")
 
         print(f"\n[Stage 2/4] Searching web & social media for matching identity...")
-        search_res: SearchResult = self.search_gateway.search_all(crop_path)
+        search_res: SearchResult = self.search_gateway.search_all(crop_path, subject_hint=subject_hint)
         social_match: SocialMatch = search_res.primary_match
+        print(f"  [+] Engine: {search_res.search_engine_used}")
+        if search_res.entity_name:
+            print(f"  [+] Identified Subject: {search_res.entity_name}")
         print(f"  [+] Discovered matches across {search_res.total_platforms} platforms: {', '.join(search_res.platforms_found)}")
         print(f"  [+] Primary post on: {social_match.platform}")
         print(f"  [+] Author: {social_match.author_handle}")
@@ -117,6 +120,8 @@ class VeriFacePipeline:
                 "total_platforms": search_res.total_platforms,
                 "platforms_found": search_res.platforms_found,
                 "all_matches": [m.to_canonical_dict() for m in search_res.all_matches],
+                "entity_name": search_res.entity_name,
+                "search_engine_used": search_res.search_engine_used,
             },
             "cryptography": {
                 "face_hash": processed_face.face_hash,

@@ -12,8 +12,7 @@ env/
 ENV/
 
 # Output
-output/*.png
-output/*.json
+output/
 !samples/demo_face.jpg
 
 # IDE

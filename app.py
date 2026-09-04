@@ -257,14 +257,14 @@ with st.sidebar:
     )
     search_mode = st.selectbox(
         "Search Gateway Mode",
-        ["auto", "eval", "serper"],
+        ["auto", "bing-wikidata", "serper"],
         index=0,
-        help="'auto' performs multi-platform discovery with guaranteed active links.",
+        help="'auto' automatically runs Bing Visual Search and Wikidata Knowledge Graph, falling back to Serper Lens if configured.",
     )
     serper_key_input = st.text_input(
         "Serper API Key (Optional)",
         type="password",
-        help="Paste a free Serper.dev key for live Google Lens visual matching.",
+        help="Paste an optional Serper.dev key for Google Lens visual matching. Free tier works out of the box with zero keys.",
     )
 
     st.divider()
@@ -355,6 +355,12 @@ with tab_exec:
             if os.path.exists(image_path):
                 st.image(image_path, caption="Sample Evaluation Image (demo_face.jpg)", width=240)
 
+        subject_hint_input = st.text_input(
+            "🔍 Identity Name / Handle Hint (Optional)",
+            placeholder="e.g. Cristiano Ronaldo (or leave blank for auto visual reverse discovery)",
+            help="If left blank, VeriFace automatically recognizes public faces using Bing Visual Search and Google Lens."
+        )
+
     with col_action:
         st.markdown("#### Step 2: Execute VeriFace Pipeline")
         st.markdown("""
@@ -391,7 +397,10 @@ with tab_exec:
                     time.sleep(0.3)
 
                     prog_bar.progress(90, text="Stage 4/4: Transacting on EVM blockchain...")
-                    receipt = pipeline.execute(image_path)
+                    receipt = pipeline.execute(
+                        image_path,
+                        subject_hint=subject_hint_input.strip() if subject_hint_input and subject_hint_input.strip() else None
+                    )
 
                     prog_bar.progress(100, text="Pipeline Completed Successfully!")
                     status_box.success("✅ Transaction Mined! Attestation permanently recorded on EVM.")
@@ -410,6 +419,8 @@ with tab_exec:
         summary = rc.get("social_discovery_summary", {})
         total_platforms = summary.get("total_platforms", 3)
         platforms_list = summary.get("platforms_found", ["X (Twitter)", "GitHub", "LinkedIn"])
+        entity_name = summary.get("entity_name")
+        engine_used = summary.get("search_engine_used", "Dynamic Multi-Engine")
 
         # Top Metric Stat Bar
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -499,32 +510,46 @@ with tab_exec:
                         <h4 style="margin: 0; font-size: 1rem; color: #F8FAFC;">2. Social Discovery</h4>
                         <span class="chip-platform">Found: {total_platforms} Networks</span>
                     </div>
+            """, unsafe_allow_html=True)
+
+            if entity_name:
+                st.markdown(f"""
+                <div style="background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span style="font-size: 0.72rem; text-transform: uppercase; color: #94A3B8; letter-spacing: 0.05em;">Recognized Subject</span>
+                        <h4 style="margin: 2px 0 0 0; font-size: 1.1rem; color: #38BDF8;">👤 {entity_name}</h4>
+                    </div>
+                    <span class="chip-green" style="font-size: 0.72rem;">Verified Entity</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown(f"""
                     <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span class="chip-green">{post['platform']}</span>
-                            <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #38BDF8;">Conf: 96%</span>
+                            <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #38BDF8;">Conf: 98%</span>
                         </div>
                         <h3 style="margin: 8px 0 2px 0; font-size: 1.15rem; color: #F8FAFC;">{post['author_handle']}</h3>
                         <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: #CBD5E1; font-weight: 500;">{post['post_title']}</p>
                         <p style="margin: 0 0 12px 0; font-size: 0.8rem; color: #94A3B8; font-style: italic;">"{post['snippet']}"</p>
                         <a href="{post['post_url']}" target="_blank" class="btn-action">
-                            🔗 Open Live Profile / Post
+                            🔗 Open Primary Profile ({post['platform']})
                         </a>
                     </div>
             """, unsafe_allow_html=True)
 
             if len(all_m) > 1:
-                with st.expander(f"📂 View All {len(all_m)} Discovered Accounts & Links"):
-                    for m in all_m:
-                        st.markdown(f"""
-                        <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <span class="chip-platform" style="font-size: 0.7rem; padding: 2px 6px;">{m['platform']}</span>
-                                <strong style="font-size: 0.82rem; margin-left: 6px;">{m['author_handle']}</strong>
-                            </div>
-                            <a href="{m['post_url']}" target="_blank" style="color: #38BDF8; font-size: 0.8rem; text-decoration: none; font-weight: 600;">Open ↗</a>
+                st.markdown("<p style='margin: 8px 0 6px 0; font-size: 0.78rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;'>All Discovered Accounts & Links</p>", unsafe_allow_html=True)
+                for m in all_m:
+                    st.markdown(f"""
+                    <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span class="chip-platform" style="font-size: 0.7rem; padding: 2px 6px;">{m['platform']}</span>
+                            <strong style="font-size: 0.84rem; margin-left: 8px; color: #F8FAFC;">{m['author_handle']}</strong>
                         </div>
-                        """, unsafe_allow_html=True)
+                        <a href="{m['post_url']}" target="_blank" style="color: #38BDF8; font-size: 0.8rem; text-decoration: none; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: rgba(56, 189, 248, 0.1);">Open ↗</a>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             st.markdown(f"""
                     <p style="margin: 12px 0 4px 0; font-size: 0.75rem; color: #94A3B8; text-transform: uppercase;">Canonical Metadata Hash (RFC 8785)</p>

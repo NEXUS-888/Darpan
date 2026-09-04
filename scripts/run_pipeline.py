@@ -63,6 +63,12 @@ def main():
         default="output",
         help="Directory to save the normalized face crop and audit receipt (default: output)",
     )
+    parser.add_argument(
+        "--subject-hint",
+        type=str,
+        default=None,
+        help="Optional identity name or handle hint (e.g. 'Cristiano Ronaldo' or 'Vishal Gowda')",
+    )
 
     args = parser.parse_args()
 
@@ -74,6 +80,8 @@ def main():
     print(f"    - Input Image:     {args.image}")
     print(f"    - Blockchain:      {args.network.upper()} (EVM)")
     print(f"    - Search Provider: {args.provider}")
+    if args.subject_hint:
+        print(f"    - Subject Hint:    {args.subject_hint}")
     print(f"    - Output Folder:   {args.output}")
 
     try:
@@ -84,7 +92,7 @@ def main():
             output_dir=args.output,
         )
 
-        receipt = pipeline.execute(args.image)
+        receipt = pipeline.execute(args.image, subject_hint=args.subject_hint)
 
         print("=" * 80)
         print(" PIPELINE EXECUTION COMPLETED SUCCESSFULLY")
