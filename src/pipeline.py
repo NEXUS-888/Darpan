@@ -67,7 +67,11 @@ class VeriFacePipeline:
         print(f"  [+] Face Keccak-256 Hash: {processed_face.face_hash}")
 
         print(f"\n[Stage 2/4] Searching web & social media for matching identity...")
-        search_res: SearchResult = self.search_gateway.search_all(crop_path, subject_hint=subject_hint)
+        search_res: SearchResult = self.search_gateway.search_all(
+            image_path_or_url=image_path,
+            subject_hint=subject_hint,
+            fallback_image_path=crop_path,
+        )
         social_match: SocialMatch = search_res.primary_match
         print(f"  [+] Engine: {search_res.search_engine_used}")
         if search_res.entity_name:

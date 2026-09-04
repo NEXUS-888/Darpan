@@ -139,10 +139,37 @@ def upload_temp_image(file_path: str) -> Optional[str]:
     return None
 
 
+GENERIC_SEARCH_PATTERNS = [
+    r"^visual\s+search.*$",
+    r"^reverse\s+image.*$",
+    r"^image\s+search.*$",
+    r"^search\s+by\s+image.*$",
+    r"^bing\s+(visual\s+)?search.*$",
+    r"^bing\s+images?.*$",
+    r"^google\s+(lens|search)?.*$",
+    r"^search.*$",
+    r"^images?.*$",
+    r"^find\s+similar\s+images?.*$",
+    r"^similar\s+images?.*$",
+    r"^web\s+search.*$",
+    r"^search\s+results?.*$",
+]
+
+
+def is_generic_search_title(title: str) -> bool:
+    if not title or len(title.strip()) < 3:
+        return True
+    t = title.strip().lower()
+    for pat in GENERIC_SEARCH_PATTERNS:
+        if re.match(pat, t):
+            return True
+    return False
+
+
 def bing_reverse_visual_search(image_url: str) -> Tuple[Optional[str], List[str]]:
     """
     Performs real reverse visual image search on Bing ($0 cost, zero API key required).
-    Returns the detected subject/entity name (e.g. 'Cristiano Ronaldo') and any direct links found.
+    Returns the detected subject/entity name (e.g. 'Cristiano Ronaldo', 'Virat Kohli') and any direct links found.
     """
     headers = {
         "User-Agent": (
@@ -161,7 +188,7 @@ def bing_reverse_visual_search(image_url: str) -> Tuple[Optional[str], List[str]
             soup = BeautifulSoup(r.text, "html.parser")
             title = soup.title.string if soup.title else ""
             cleaned = re.sub(r"\s*-\s*Search.*$", "", title, flags=re.IGNORECASE).strip()
-            if cleaned and "bing" not in cleaned.lower() and len(cleaned) > 2:
+            if cleaned and not is_generic_search_title(cleaned) and len(cleaned) > 2:
                 detected_entity = cleaned
 
             for a in soup.find_all("a", href=True):
@@ -176,50 +203,67 @@ def bing_reverse_visual_search(image_url: str) -> Tuple[Optional[str], List[str]
 
 def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional[str], str, List[SocialMatch]]:
     """
-    Queries the Wikipedia and Wikidata knowledge graphs to resolve verified
-    social media handles (Twitter/X, Instagram, Facebook, YouTube, LinkedIn, Web)
-    for a recognized identity. 100% real, active links.
+    Queries the Wikidata knowledge graph to resolve verified human social media handles
+    (Twitter/X, Instagram, Facebook, YouTube, LinkedIn, Web) for a recognized identity.
+    Enforces P31 == Q5 (human) to prevent non-person concepts from matching.
     """
+    if is_generic_search_title(entity_name):
+        return None, "", []
+
     headers = {"User-Agent": "VeriFaceBot/2.0 (Biometric Verification Research)"}
     matches: List[SocialMatch] = []
     now = int(time.time())
 
     try:
-        # 1. Search Wikipedia for entity
-        r = requests.get(
-            f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={requests.utils.quote(entity_name)}&format=json",
-            headers=headers,
-            timeout=8,
-        ).json()
-        search_results = r.get("query", {}).get("search", [])
-        if not search_results:
+        # 1. Fast direct entity search on Wikidata
+        search_url = (
+            f"https://www.wikidata.org/w/api.php?action=wbsearchentities"
+            f"&search={requests.utils.quote(entity_name)}&language=en&format=json"
+        )
+        r = requests.get(search_url, headers=headers, timeout=8).json()
+        search_items = r.get("search", [])
+        if not search_items:
             return None, "", []
 
-        canonical_title = search_results[0]["title"]
-        raw_snippet = search_results[0].get("snippet", "")
-        clean_snippet = re.sub(r"<[^>]+>", "", raw_snippet).strip()
+        qid = None
+        canonical_title = None
+        clean_snippet = ""
 
-        # 2. Get Wikidata entity ID
-        r2 = requests.get(
-            f"https://en.wikipedia.org/w/api.php?action=query&prop=pageprops&titles={requests.utils.quote(canonical_title)}&format=json",
-            headers=headers,
-            timeout=8,
-        ).json()
-        pages = r2.get("query", {}).get("pages", {})
-        if not pages:
-            return canonical_title, clean_snippet, []
+        # Find the first human item or best match
+        for item in search_items:
+            cand_qid = item.get("id")
+            cand_label = item.get("label", "")
+            cand_desc = item.get("description", "")
+            if not cand_qid:
+                continue
 
-        first_page = list(pages.values())[0]
-        qid = first_page.get("pageprops", {}).get("wikibase_item")
-        if not qid:
-            return canonical_title, clean_snippet, []
+            # Fetch entity claims
+            entity_url = f"https://www.wikidata.org/wiki/Special:EntityData/{cand_qid}.json"
+            r_entity = requests.get(entity_url, headers=headers, timeout=8).json()
+            claims = r_entity.get("entities", {}).get(cand_qid, {}).get("claims", {})
 
-        # 3. Retrieve Wikidata Claims
-        r3 = requests.get(
-            f"https://www.wikidata.org/wiki/Special:EntityData/{qid}.json",
-            headers=headers,
-            timeout=10,
-        ).json()
+            # P31 check: ensure entity is human (Q5)
+            if "P31" in claims:
+                p31_ids = [
+                    c.get("mainsnak", {}).get("datavalue", {}).get("value", {}).get("id")
+                    for c in claims["P31"]
+                    if "datavalue" in c.get("mainsnak", {})
+                ]
+                if "Q5" not in p31_ids:
+                    # Skip non-human entity (e.g. software, concepts)
+                    continue
+
+            qid = cand_qid
+            canonical_title = cand_label
+            clean_snippet = cand_desc
+            break
+
+        if not qid or not canonical_title:
+            return None, "", []
+
+        # 2. Extract verified social claims for the confirmed human entity
+        entity_url = f"https://www.wikidata.org/wiki/Special:EntityData/{qid}.json"
+        r3 = requests.get(entity_url, headers=headers, timeout=8).json()
         claims = r3.get("entities", {}).get(qid, {}).get("claims", {})
 
         # P2002: Twitter / X username
@@ -500,7 +544,12 @@ class DynamicIdentityResolver(BaseSearchProvider):
     def __init__(self):
         self.last_detected_entity: Optional[str] = None
 
-    def search_face(self, image_path_or_url: str, subject_hint: Optional[str] = None) -> List[SocialMatch]:
+    def search_face(
+        self,
+        image_path_or_url: str,
+        subject_hint: Optional[str] = None,
+        fallback_image_path: Optional[str] = None
+    ) -> List[SocialMatch]:
         image_url = image_path_or_url
         if os.path.exists(image_path_or_url):
             hosted_url = upload_temp_image(image_path_or_url)
@@ -512,14 +561,24 @@ class DynamicIdentityResolver(BaseSearchProvider):
         # 1. Reverse visual lookup on Bing if not provided a hint
         if not detected_entity and image_url.startswith("http"):
             bing_name, _ = bing_reverse_visual_search(image_url)
-            if bing_name:
+            if bing_name and not is_generic_search_title(bing_name):
                 detected_entity = bing_name
                 print(f"[DynamicIdentityResolver] Visual search recognized subject: '{detected_entity}'")
+
+        # 1b. If not detected from primary image, try fallback image (e.g. crop)
+        if not detected_entity and fallback_image_path and os.path.exists(fallback_image_path):
+            fallback_url = upload_temp_image(fallback_image_path)
+            if fallback_url:
+                bing_name_fb, _ = bing_reverse_visual_search(fallback_url)
+                if bing_name_fb and not is_generic_search_title(bing_name_fb):
+                    detected_entity = bing_name_fb
+                    image_url = fallback_url
+                    print(f"[DynamicIdentityResolver] Fallback visual search recognized: '{detected_entity}'")
 
         self.last_detected_entity = detected_entity
         matches: List[SocialMatch] = []
 
-        # 2. If entity is known or detected, resolve verified accounts via Wikidata
+        # 2. If entity is known or detected, resolve verified human accounts via Wikidata
         if detected_entity:
             canon_name, bio, wiki_matches = resolve_wikidata_socials(detected_entity, image_url)
             if canon_name:
@@ -565,7 +624,14 @@ class SearchGateway:
             return SerperProvider(self.api_key)
         return DynamicIdentityResolver()
 
-    def search_all(self, image_path_or_url: str, subject_hint: Optional[str] = None) -> SearchResult:
+    def search_all(
+        self,
+        image_path_or_url: str,
+        subject_hint: Optional[str] = None,
+        fallback_image_path: Optional[str] = None,
+        *args,
+        **kwargs
+    ) -> SearchResult:
         """
         Discovers all matching social media posts across platforms and computes summary metrics.
         """
@@ -574,19 +640,35 @@ class SearchGateway:
         engine_used = "Serper Google Lens" if isinstance(self.provider, SerperProvider) else "Bing Visual & Wikidata Knowledge Graph"
 
         try:
-            matches = self.provider.search_face(image_path_or_url, subject_hint=subject_hint)
+            if isinstance(self.provider, DynamicIdentityResolver):
+                matches = self.provider.search_face(
+                    image_path_or_url,
+                    subject_hint=subject_hint,
+                    fallback_image_path=fallback_image_path
+                )
+            else:
+                matches = self.provider.search_face(image_path_or_url, subject_hint=subject_hint)
+
             if hasattr(self.provider, "last_detected_entity") and self.provider.last_detected_entity:
                 detected_entity = self.provider.last_detected_entity
         except Exception as e:
             print(f"[SearchGateway] Primary provider failed: {e}. Engaging DynamicIdentityResolver.")
             fallback = DynamicIdentityResolver()
-            matches = fallback.search_face(image_path_or_url, subject_hint=subject_hint)
+            matches = fallback.search_face(
+                image_path_or_url,
+                subject_hint=subject_hint,
+                fallback_image_path=fallback_image_path
+            )
             detected_entity = fallback.last_detected_entity or detected_entity
             engine_used = "Dynamic Multi-Engine Fallback"
 
         if not matches:
             fallback = DynamicIdentityResolver()
-            matches = fallback.search_face(image_path_or_url, subject_hint=subject_hint)
+            matches = fallback.search_face(
+                image_path_or_url,
+                subject_hint=subject_hint,
+                fallback_image_path=fallback_image_path
+            )
             detected_entity = fallback.last_detected_entity or detected_entity
 
         # Deduplicate matches by post_url
