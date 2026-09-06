@@ -37,6 +37,16 @@ st.set_page_config(
 )
 
 
+def render_html(markup: str) -> None:
+    """
+    Safely render HTML in Streamlit without CommonMark code-block indentation interpretation.
+    Strips leading whitespace from each line to eliminate 4-space markdown code-block triggers,
+    and removes empty lines that prematurely terminate CommonMark Type 6 HTML blocks.
+    """
+    clean_lines = [line.strip() for line in markup.strip().splitlines() if line.strip()]
+    st.markdown("\n".join(clean_lines), unsafe_allow_html=True)
+
+
 # -----------------------------------------------------------------------------
 # BESPOKE CYBER-BIOMETRIC DESIGN SYSTEM & ANIMATIONS
 # -----------------------------------------------------------------------------
@@ -552,7 +562,7 @@ IDLE_STANDBY_HTML = """
 # -----------------------------------------------------------------------------
 # TOP NAVIGATION: KANNADI CYBER-BIOMETRIC TERMINAL
 # -----------------------------------------------------------------------------
-st.markdown("""
+render_html("""
 <div class="kannadi-header">
     <div class="kannadi-branding">
         <div class="kannadi-prism-icon">🪞</div>
@@ -564,7 +574,6 @@ st.markdown("""
             <p class="kannadi-subtitle">ON-CHAIN FACE VERIFICATION & IDENTITY ATTESTATION</p>
         </div>
     </div>
-
     <div class="kannadi-telemetry">
         <div class="telemetry-item">
             <span class="telemetry-label">CONSENSUS</span>
@@ -580,7 +589,7 @@ st.markdown("""
         </div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""")
 
 # -----------------------------------------------------------------------------
 # SESSION STATE INITIALIZATION
@@ -626,14 +635,14 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### Telemetry Spec")
-    st.markdown(f"""
-    - **Resolution**: `512×512 Normalized`
-    - **Biometrics**: `ArcFace (DeepFace / Biometric Fallback)`
-    - **Visual Search**: {visual_search_spec}
-    - **Cryptography**: `Keccak-256 (SHA3)`
-    - **Standard**: `RFC 8785 Canonical JCS`
-    - **Registry**: `Solidity 0.8.20`
-    """)
+    st.markdown(
+        f"- **Resolution**: `512×512 Normalized`\n"
+        f"- **Biometrics**: `ArcFace (DeepFace / Biometric Fallback)`\n"
+        f"- **Visual Search**: {visual_search_spec}\n"
+        f"- **Cryptography**: `Keccak-256 (SHA3)`\n"
+        f"- **Standard**: `RFC 8785 Canonical JCS`\n"
+        f"- **Registry**: `Solidity 0.8.20`"
+    )
     st.markdown("[View Repository on GitHub ↗](https://github.com/NEXUS-888/Kannadi.git)")
 
     if st.session_state.get("last_receipt"):
@@ -683,7 +692,7 @@ with tab_pipeline:
                 image_path = "output/uploaded_face.jpg"
                 st.image(image_path, caption="Current Ingested Portrait", width=280)
             else:
-                st.markdown(SCANNER_STANDBY_HTML, unsafe_allow_html=True)
+                render_html(SCANNER_STANDBY_HTML)
 
         elif input_mode == "📸 Live Camera":
             cam_picture = st.camera_input("Capture selfie from webcam")
@@ -765,7 +774,7 @@ with tab_pipeline:
     # RESULTS DASHBOARD: HIGH-SIGNAL TELEMETRY & SETTLEMENT
     # -------------------------------------------------------------------------
     if st.session_state.last_receipt:
-        st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
+        render_html("<div style='margin-top: 24px;'></div>")
         rc = st.session_state.last_receipt
         summary = rc.get("social_discovery_summary", {})
         total_platforms = summary.get("total_platforms", 1)
@@ -789,35 +798,35 @@ with tab_pipeline:
         # 4-Up High-Contrast Telemetry Bar
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
         with col_m1:
-            st.markdown(f"""
+            render_html(f"""
             <div class="telemetry-card">
                 <span class="card-label">ARCFACE BIOMETRICS</span>
                 <span class="card-number" style="color: #00FFA3;">{bio_similarity*100:.1f}%</span>
             </div>
-            """, unsafe_allow_html=True)
+            """)
         with col_m2:
-            st.markdown(f"""
+            render_html(f"""
             <div class="telemetry-card">
                 <span class="card-label">SOCIAL GRAPH</span>
                 <span class="card-number" style="color: #00E5FF;">{total_platforms} Network{'s' if total_platforms > 1 else ''}</span>
             </div>
-            """, unsafe_allow_html=True)
+            """)
         with col_m3:
-            st.markdown(f"""
+            render_html(f"""
             <div class="telemetry-card">
                 <span class="card-label">EVM CONSENSUS</span>
                 <span class="card-number" style="color: #FFB800;">Block #{bc['block_number']}</span>
             </div>
-            """, unsafe_allow_html=True)
+            """)
         with col_m4:
-            st.markdown(f"""
+            render_html(f"""
             <div class="telemetry-card" style="border-color: rgba(0, 255, 163, 0.45); box-shadow: 0 0 20px rgba(0, 255, 163, 0.2);">
                 <span class="card-label">CONSENSUS STATE</span>
                 <span class="card-number" style="color: #00FFA3; text-shadow: 0 0 12px rgba(0, 255, 163, 0.6);">VERIFIED ✓</span>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
-        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+        render_html("<div style='margin-top: 20px;'></div>")
 
         # 3 High-Impact Scannable Columns
         col_c1, col_c2, col_c3 = st.columns([1, 1.25, 1.15], gap="medium")
@@ -830,27 +839,27 @@ with tab_pipeline:
                 st.image(crop_file, width=260)
 
             # ArcFace Biometric Score Pill
-            st.markdown(f"""
+            render_html(f"""
             <div style="margin: 8px 0; padding: 7px 12px; background: rgba(0, 255, 163, 0.08); border-radius: 8px; border: 1px solid rgba(0, 255, 163, 0.25); display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 0.78rem; color: #94A3B8;">ArcFace Match</span>
                 <span style="font-size: 0.84rem; font-weight: 700; color: #00FFA3;">{bio_similarity*100:.1f}% {'(VERIFIED ✓)' if bio_verified else ''}</span>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
             st.caption("Keccak-256 Face Fingerprint (Normalized 512×512)")
-            st.markdown(f'<span class="cyber-hash-pill">{rc["cryptography"]["face_hash"]}</span>', unsafe_allow_html=True)
+            render_html(f'<span class="cyber-hash-pill">{rc["cryptography"]["face_hash"]}</span>')
             st.caption("🔒 Zero biometric pixels stored on-chain. GDPR Article 9 & CCPA compliant.")
 
         # Column 2: Social Identity Graph
         with col_c2:
             st.markdown("#### 2. Discovered Identity Graph")
             engine_badge = summary.get("search_engine_used", "Federated Multi-Engine" if search_mode in ("all-engines", "federated") else "Multi-Engine")
-            st.markdown(f"""
+            render_html(f"""
             <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 0.72rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">ENGINE:</span>
                 <span style="font-size: 0.74rem; font-weight: 700; color: #00E5FF; background: rgba(0, 229, 255, 0.08); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(0, 229, 255, 0.2);">{engine_badge}</span>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
             matched_thumbs = summary.get("matched_image_urls", [])
             if matched_thumbs:
@@ -861,18 +870,18 @@ with tab_pipeline:
                         try:
                             st.image(t_url, width=60)
                         except Exception:
-                            pass
+                            render_html('<div style="width:60px; height:60px; background: rgba(255,255,255,0.05); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #64748B;">IMG</div>')
 
             if entity_name:
-                st.markdown(f"""
+                render_html(f"""
                 <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <span style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC; letter-spacing: -0.02em;">👤 {entity_name}</span>
                     <span class="platform-pill platform-generic">VERIFIED ENTITY</span>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
             if is_unindexed:
-                st.markdown(f"""
+                render_html(f"""
                 <div style="background: rgba(0, 255, 163, 0.06); border: 1px solid rgba(0, 255, 163, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <span class="platform-pill platform-generic">🔒 Self-Sovereign Biometric Voucher</span>
@@ -883,7 +892,7 @@ with tab_pipeline:
                         Face normalized and cryptographically anchored to EVM Block #{bc['block_number']}. No matching public web footprint found (Privacy Preserved).
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
                 with st.expander("🔗 Link Social Profile to this Face Hash"):
                     st.caption("Provide your personal X, Instagram, GitHub, or LinkedIn handle to attach your real identity to this biometric hash on the EVM:")
@@ -914,7 +923,7 @@ with tab_pipeline:
 
             else:
                 platform_class = "platform-instagram" if "Instagram" in post['platform'] else ("platform-x" if "X" in post['platform'] or "Twitter" in post['platform'] else "platform-linkedin")
-                st.markdown(f"""
+                render_html(f"""
                 <div style="background: rgba(12, 18, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <span class="platform-pill {platform_class}">🌐 {post['platform']}</span>
@@ -926,27 +935,27 @@ with tab_pipeline:
                         Open Verified Profile ↗
                     </a>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
             # Additional linked platforms
             all_m = summary.get("all_matches", [])
             if len(all_m) > 1 and not is_unindexed:
                 st.caption("Other Discovered Profiles")
                 for m in all_m[1:4]:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 12px; background: rgba(3, 7, 13, 0.7); border-radius: 8px; margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.06);">
                         <span style="font-size: 0.82rem; color: #E2E8F0;"><strong>{m['platform']}</strong>: {m['author_handle']}</span>
                         <a href="{m['post_url']}" target="_blank" style="color: #00FFA3; font-size: 0.78rem; text-decoration: none; font-weight: 700;">Visit ↗</a>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
 
             st.caption("Canonical Metadata Hash (RFC 8785)")
-            st.markdown(f'<span class="cyber-hash-pill">{rc["cryptography"]["metadata_hash"]}</span>', unsafe_allow_html=True)
+            render_html(f'<span class="cyber-hash-pill">{rc["cryptography"]["metadata_hash"]}</span>')
 
         # Column 3: EVM On-Chain Settlement
         with col_c3:
             st.markdown("#### 3. EVM Settlement Ledger")
-            st.markdown(f"""
+            render_html(f"""
             <div style="background: rgba(12, 18, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
                 <div style="margin-bottom: 8px; font-size: 0.82rem; display: flex; justify-content: space-between;">
                     <span style="color: #94A3B8;">Consensus:</span>
@@ -969,10 +978,10 @@ with tab_pipeline:
                     <code style="color: #E2E8F0;">{bc['attestor'][:10]}...{bc['attestor'][-6:]}</code>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
             st.caption("Cryptographic Attestation ID (bytes32)")
-            st.markdown(f'<span class="cyber-hash-pill">{rc["cryptography"]["attestation_id"]}</span>', unsafe_allow_html=True)
+            render_html(f'<span class="cyber-hash-pill">{rc["cryptography"]["attestation_id"]}</span>')
 
             st.download_button(
                 "⬇ Download Cryptographic Receipt (JSON)",
@@ -982,7 +991,7 @@ with tab_pipeline:
                 width="stretch"
             )
     else:
-        st.markdown(IDLE_STANDBY_HTML, unsafe_allow_html=True)
+        render_html(IDLE_STANDBY_HTML)
 
 
 # =============================================================================
@@ -1007,23 +1016,23 @@ with tab_verify:
             )
 
             if tamper_mode:
-                st.markdown("""
+                render_html("""
                 <div class="tamper-strobe-alert" style="margin: 12px 0;">
                     <strong style="color: #FF2A55; font-size: 0.9rem;">⚠️ ADVERSARIAL TAMPER MODE ACTIVE</strong>
                     <div style="font-size: 0.8rem; color: #FECACA; margin-top: 4px;">
                         Injected 1-byte mutation into biometric face vector and canonical metadata string.
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
             else:
-                st.markdown("""
+                render_html("""
                 <div style="background: rgba(0, 255, 163, 0.08); border: 1px solid rgba(0, 255, 163, 0.35); border-radius: 12px; padding: 14px; margin: 12px 0; box-shadow: 0 0 16px rgba(0, 255, 163, 0.1);">
                     <strong style="color: #00FFA3; font-size: 0.9rem;">✓ ZERO-TRUST AUTHENTIC AUDIT</strong>
                     <div style="font-size: 0.8rem; color: #A7F3D0; margin-top: 4px;">
                         Verifying unaltered biometric crop and canonical metadata against EVM ledger.
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """)
 
             run_audit = st.button("🔎 Execute On-Chain Verification Audit", type="primary", width="stretch")
 
@@ -1062,7 +1071,7 @@ with tab_verify:
                 onchain_ok = audit_res.get("is_valid", False)
 
                 if face_ok and meta_ok and onchain_ok:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div style="background: linear-gradient(135deg, rgba(0, 50, 30, 0.85) 0%, rgba(3, 30, 20, 0.95) 100%); border: 1px solid #00FFA3; border-radius: 14px; padding: 20px; box-shadow: 0 0 30px rgba(0, 255, 163, 0.25);">
                         <h4 style="color: #00FFA3; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 800;">✅ AUDIT PASSED: 100% CRYPTOGRAPHIC INTEGRITY</h4>
                         <div style="color: #D1FAE5; font-size: 0.85rem; margin-bottom: 14px;">The source face scan and discovered social metadata match the on-chain consensus state bit-for-bit.</div>
@@ -1073,9 +1082,9 @@ with tab_verify:
                             <div>• Attestor Signer: <code>{audit_res.get('attestor')}</code></div>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
                 else:
-                    st.markdown(f"""
+                    render_html(f"""
                     <div style="background: linear-gradient(135deg, rgba(60, 10, 20, 0.85) 0%, rgba(30, 5, 10, 0.95) 100%); border: 1px solid #FF2A55; border-radius: 14px; padding: 20px; box-shadow: 0 0 30px rgba(255, 42, 85, 0.35);">
                         <h4 style="color: #FF2A55; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 800;">🚨 AUDIT FAILED: CRYPTOGRAPHIC TAMPER DETECTED</h4>
                         <div style="color: #FEE2E2; font-size: 0.85rem; margin-bottom: 14px;">Cryptographic commitment divergence detected! Transaction hash rejected by consensus.</div>
@@ -1085,7 +1094,7 @@ with tab_verify:
                             <div>• EVM Smart Contract State: <strong style="color: #FF2A55;">HASH MISMATCH (TRANSACTION REJECTED)</strong></div>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """)
             else:
                 st.caption("Click 'Execute On-Chain Verification Audit' to test the tamper-evidence cryptographic verification.")
 
@@ -1099,12 +1108,12 @@ with tab_contract:
     col_details, col_source = st.columns([1, 1.2], gap="medium")
 
     with col_details:
-        st.markdown("""
-        ##### Architecture Highlights
-        - **GDPR Article 9 Compliance**: Zero biometric pixels or embeddings stored on-chain. Only one-way non-invertible Keccak-256 commitments are recorded.
-        - **RFC 8785 Canonicalization**: JSON metadata canonicalized to guarantee bit-for-bit parity across all operating systems.
-        - **Dual Consensus**: Instant evaluation via embedded in-memory Py-EVM with full Base Sepolia testnet deployment parity.
-        """)
+        st.markdown(
+            "##### Architecture Highlights\n"
+            "- **GDPR Article 9 Compliance**: Zero biometric pixels or embeddings stored on-chain. Only one-way non-invertible Keccak-256 commitments are recorded.\n"
+            "- **RFC 8785 Canonicalization**: JSON metadata canonicalized to guarantee bit-for-bit parity across all operating systems.\n"
+            "- **Dual Consensus**: Instant evaluation via embedded in-memory Py-EVM with full Base Sepolia testnet deployment parity."
+        )
 
         if st.session_state.last_receipt:
             with st.expander("View Raw Attestation Receipt JSON", expanded=False):

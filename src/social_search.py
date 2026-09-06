@@ -103,8 +103,11 @@ def identify_social_platform(url: str) -> Optional[str]:
         for social_domain, platform_name in SOCIAL_DOMAINS.items():
             if domain == social_domain or domain.endswith("." + social_domain):
                 return platform_name
-    except Exception:
-        pass
+    except (ValueError, AttributeError):
+        return None
+    except Exception as e:
+        print(f"[PlatformDetect] Unexpected error parsing URL {url}: {e}")
+        return None
     return None
 
 
@@ -307,8 +310,10 @@ def extract_author_handle(url: str, platform: str, title: Optional[str] = None) 
             if len(path) >= 1:
                 return f"@{path[-1][:20].lstrip('@')}"
             return f"@{platform.lower().replace(' ', '')}"
-    except Exception:
-        pass
+    except (ValueError, IndexError, AttributeError) as e:
+        print(f"[HandleExtract] Failed to parse author handle from {post_url}: {e}")
+    except Exception as e:
+        print(f"[HandleExtract] Unexpected error extracting handle from {post_url}: {e}")
     return "@discovered_user"
 
 
@@ -624,7 +629,11 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
 
             if qid and canonical_title:
                 break
-        except Exception:
+        except (requests.RequestException, KeyError, IndexError, TypeError) as e:
+            print(f"[Wikidata] Candidate query resolution warning for '{search_title}': {e}")
+            continue
+        except Exception as e:
+            print(f"[Wikidata] Unexpected error evaluating query candidate '{search_title}': {e}")
             continue
 
     if not qid or not canonical_title:
@@ -636,124 +645,115 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
         r3 = requests.get(entity_url, headers=headers, timeout=8).json()
         claims = r3.get("entities", {}).get(qid, {}).get("claims", {})
 
+        def _get_claim_val(prop_id: str) -> Optional[str]:
+            if prop_id in claims and isinstance(claims[prop_id], list) and claims[prop_id]:
+                try:
+                    snak = claims[prop_id][0].get("mainsnak", {})
+                    datavalue = snak.get("datavalue", {})
+                    val = datavalue.get("value")
+                    if isinstance(val, str):
+                        return val
+                except (IndexError, KeyError, TypeError) as ex:
+                    print(f"[Wikidata] Parsing claim {prop_id} warning: {ex}")
+            return None
+
         # P2002: Twitter / X username
-        if "P2002" in claims:
-            try:
-                tw = claims["P2002"][0]["mainsnak"]["datavalue"]["value"]
-                matches.append(SocialMatch(
-                    platform="X (Twitter)",
-                    post_url=f"https://x.com/{tw}",
-                    author_handle=f"@{tw}",
-                    post_title=f"{canonical_title} (@{tw}) on X (Twitter)",
-                    snippet=f"Verified public profile for {canonical_title}. {clean_snippet[:120]}...",
-                    matched_image_url=image_url,
-                    discovery_timestamp=now,
-                    confidence_score=0.99,
-                ))
-            except Exception:
-                pass
+        tw = _get_claim_val("P2002")
+        if tw:
+            matches.append(SocialMatch(
+                platform="X (Twitter)",
+                post_url=f"https://x.com/{tw}",
+                author_handle=f"@{tw}",
+                post_title=f"{canonical_title} (@{tw}) on X (Twitter)",
+                snippet=f"Verified public profile for {canonical_title}. {clean_snippet[:120]}...",
+                matched_image_url=image_url,
+                discovery_timestamp=now,
+                confidence_score=0.99,
+            ))
 
         # P2003: Instagram username
-        if "P2003" in claims:
-            try:
-                ig = claims["P2003"][0]["mainsnak"]["datavalue"]["value"]
-                matches.append(SocialMatch(
-                    platform="Instagram",
-                    post_url=f"https://www.instagram.com/{ig}/",
-                    author_handle=f"@{ig}",
-                    post_title=f"{canonical_title} (@{ig}) on Instagram",
-                    snippet=f"Official Instagram account of {canonical_title}.",
-                    matched_image_url=image_url,
-                    discovery_timestamp=now,
-                    confidence_score=0.99,
-                ))
-            except Exception:
-                pass
+        ig = _get_claim_val("P2003")
+        if ig:
+            matches.append(SocialMatch(
+                platform="Instagram",
+                post_url=f"https://www.instagram.com/{ig}/",
+                author_handle=f"@{ig}",
+                post_title=f"{canonical_title} (@{ig}) on Instagram",
+                snippet=f"Official Instagram account of {canonical_title}.",
+                matched_image_url=image_url,
+                discovery_timestamp=now,
+                confidence_score=0.99,
+            ))
 
         # P2013: Facebook ID / username
-        if "P2013" in claims:
-            try:
-                fb = claims["P2013"][0]["mainsnak"]["datavalue"]["value"]
-                matches.append(SocialMatch(
-                    platform="Facebook",
-                    post_url=f"https://www.facebook.com/{fb}",
-                    author_handle=f"@{fb}",
-                    post_title=f"{canonical_title} on Facebook",
-                    snippet=f"Official Facebook public page for {canonical_title}.",
-                    matched_image_url=image_url,
-                    discovery_timestamp=now,
-                    confidence_score=0.95,
-                ))
-            except Exception:
-                pass
+        fb = _get_claim_val("P2013")
+        if fb:
+            matches.append(SocialMatch(
+                platform="Facebook",
+                post_url=f"https://www.facebook.com/{fb}",
+                author_handle=f"@{fb}",
+                post_title=f"{canonical_title} on Facebook",
+                snippet=f"Official Facebook public page for {canonical_title}.",
+                matched_image_url=image_url,
+                discovery_timestamp=now,
+                confidence_score=0.95,
+            ))
 
         # P2397: YouTube channel ID
-        if "P2397" in claims:
-            try:
-                yt = claims["P2397"][0]["mainsnak"]["datavalue"]["value"]
-                matches.append(SocialMatch(
-                    platform="YouTube",
-                    post_url=f"https://www.youtube.com/channel/{yt}",
-                    author_handle=f"channel/{yt[-8:]}",
-                    post_title=f"{canonical_title} Official YouTube Channel",
-                    snippet=f"Official video channel for {canonical_title}.",
-                    matched_image_url=image_url,
-                    discovery_timestamp=now,
-                    confidence_score=0.93,
-                ))
-            except Exception:
-                pass
+        yt = _get_claim_val("P2397")
+        if yt:
+            matches.append(SocialMatch(
+                platform="YouTube",
+                post_url=f"https://www.youtube.com/channel/{yt}",
+                author_handle=f"channel/{yt[-8:]}",
+                post_title=f"{canonical_title} Official YouTube Channel",
+                snippet=f"Official video channel for {canonical_title}.",
+                matched_image_url=image_url,
+                discovery_timestamp=now,
+                confidence_score=0.93,
+            ))
 
         # P2037: GitHub username
-        if "P2037" in claims:
-            try:
-                gh = claims["P2037"][0]["mainsnak"]["datavalue"]["value"]
-                matches.append(SocialMatch(
-                    platform="GitHub",
-                    post_url=f"https://github.com/{gh}",
-                    author_handle=f"@{gh}",
-                    post_title=f"{canonical_title} (@{gh}) on GitHub",
-                    snippet=f"Open-source developer repositories and activity for {canonical_title}.",
-                    matched_image_url=image_url,
-                    discovery_timestamp=now,
-                    confidence_score=0.98,
-                ))
-            except Exception:
-                pass
+        gh = _get_claim_val("P2037")
+        if gh:
+            matches.append(SocialMatch(
+                platform="GitHub",
+                post_url=f"https://github.com/{gh}",
+                author_handle=f"@{gh}",
+                post_title=f"{canonical_title} (@{gh}) on GitHub",
+                snippet=f"Open-source developer repositories and activity for {canonical_title}.",
+                matched_image_url=image_url,
+                discovery_timestamp=now,
+                confidence_score=0.98,
+            ))
 
         # P2035: LinkedIn profile
-        if "P2035" in claims:
-            try:
-                li = claims["P2035"][0]["mainsnak"]["datavalue"]["value"]
-                matches.append(SocialMatch(
-                    platform="LinkedIn",
-                    post_url=f"https://www.linkedin.com/in/{li}",
-                    author_handle=f"in/{li}",
-                    post_title=f"{canonical_title} on LinkedIn",
-                    snippet=f"Professional network profile for {canonical_title}.",
-                    matched_image_url=image_url,
-                    discovery_timestamp=now,
-                    confidence_score=0.97,
-                ))
-            except Exception:
-                pass
+        li = _get_claim_val("P2035")
+        if li:
+            matches.append(SocialMatch(
+                platform="LinkedIn",
+                post_url=f"https://www.linkedin.com/in/{li}",
+                author_handle=f"in/{li}",
+                post_title=f"{canonical_title} on LinkedIn",
+                snippet=f"Professional network profile for {canonical_title}.",
+                matched_image_url=image_url,
+                discovery_timestamp=now,
+                confidence_score=0.97,
+            ))
 
         # P856: Official Website
-        if "P856" in claims:
-            try:
-                web = claims["P856"][0]["mainsnak"]["datavalue"]["value"]
-                matches.append(SocialMatch(
-                    platform="Official Website",
-                    post_url=web,
-                    author_handle="@web",
-                    post_title=f"{canonical_title} Official Web Portal",
-                    snippet=f"Canonical home page and web domain for {canonical_title}.",
-                    matched_image_url=image_url,
-                    discovery_timestamp=now,
-                    confidence_score=0.96,
-                ))
-            except Exception:
-                pass
+        web = _get_claim_val("P856")
+        if web:
+            matches.append(SocialMatch(
+                platform="Official Website",
+                post_url=web,
+                author_handle="@web",
+                post_title=f"{canonical_title} Official Web Portal",
+                snippet=f"Canonical home page and web domain for {canonical_title}.",
+                matched_image_url=image_url,
+                discovery_timestamp=now,
+                confidence_score=0.96,
+            ))
 
         return canonical_title, clean_snippet, matches
 
