@@ -129,3 +129,84 @@ def test_face_engine_invalid_input_graceful_handling():
     assert sim.score == 0.0
     assert sim.verified is False
     assert "error" in sim.details
+
+
+def test_face_engine_insightface_attributes(sample_image_path):
+    engine = FaceEngine(prefer_insightface=True)
+    processed = engine.process_image(sample_image_path)
+    assert hasattr(processed, "landmarks")
+    assert hasattr(processed, "alignment_method")
+    assert processed.face_detected is True
+    if processed.landmarks is not None:
+        assert len(processed.landmarks) == 5
+        assert processed.alignment_method == "insightface_5point_affine"
+    else:
+        assert processed.alignment_method == "haar_box_crop"
+
+
+def test_face_engine_rgba_conversion(tmp_path):
+    # Create 4-channel BGRA image with alpha channel
+    rgba = np.zeros((200, 200, 4), dtype=np.uint8)
+    rgba[:, :, 0] = 255  # Blue
+    rgba[:, :, 3] = 128  # Alpha
+    rgba_path = str(tmp_path / "rgba_test.png")
+    cv2.imwrite(rgba_path, rgba)
+
+    engine = FaceEngine()
+    loaded = engine._load_image(rgba_path)
+    assert loaded is not None
+    assert len(loaded.shape) == 3
+    assert loaded.shape[2] == 3  # Normalized to 3-channel BGR
+
+
+def test_face_engine_exif_orientation_handling(tmp_path):
+    # Test that _load_image handles EXIF orientation transposition without crashing
+    from PIL import Image
+    im = Image.new("RGB", (100, 200), color="red")
+    im_path = str(tmp_path / "portrait_exif.jpg")
+    im.save(im_path, "JPEG")
+
+    engine = FaceEngine()
+    loaded = engine._load_image(im_path)
+    assert loaded is not None
+    assert loaded.shape == (200, 100, 3)
+
+
+def test_face_engine_prefer_insightface_flag(sample_image_path):
+    engine_no_insight = FaceEngine(prefer_insightface=False)
+    processed = engine_no_insight.process_image(sample_image_path)
+    assert processed.face_detected is True
+    assert processed.alignment_method == "haar_box_crop"
+
+
+def test_face_engine_cmyk_and_palette_handling(tmp_path):
+    from PIL import Image
+    # CMYK mode image
+    cmyk_im = Image.new("CMYK", (80, 80), color=(100, 50, 0, 10))
+    cmyk_path = str(tmp_path / "cmyk_test.jpg")
+    cmyk_im.save(cmyk_path)
+
+    engine = FaceEngine()
+    loaded_cmyk = engine._load_image(cmyk_path)
+    assert loaded_cmyk is not None
+    assert loaded_cmyk.shape == (80, 80, 3)
+
+    # Palette mode image (P)
+    p_im = Image.new("P", (60, 60))
+    p_path = str(tmp_path / "palette_test.png")
+    p_im.save(p_path)
+    loaded_p = engine._load_image(p_path)
+    assert loaded_p is not None
+    assert loaded_p.shape == (60, 60, 3)
+
+
+def test_face_engine_align_face_5point_degenerate():
+    engine = FaceEngine()
+    dummy_img = np.zeros((200, 200, 3), dtype=np.uint8)
+    # Degenerate points (all at same coordinate)
+    kps_degenerate = np.array([[50.0, 50.0]] * 5, dtype=np.float32)
+    aligned = engine.align_face_5point(dummy_img, kps_degenerate)
+    assert aligned is not None
+    assert aligned.shape == (512, 512, 3)
+
+

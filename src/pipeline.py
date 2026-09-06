@@ -35,11 +35,16 @@ class DarpanPipeline:
         rpc_url: Optional[str] = None,
         private_key: Optional[str] = None,
         output_dir: str = "output",
+        prefer_insightface: bool = True,
+        insightface_model: str = "buffalo_sc",
     ):
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
 
-        self.face_engine = FaceEngine()
+        self.face_engine = FaceEngine(
+            prefer_insightface=prefer_insightface,
+            insightface_model=insightface_model,
+        )
         self.search_gateway = SearchGateway(provider_type=search_provider, api_key=api_key)
         self.blockchain_service = BlockchainService(
             network=network,
@@ -50,7 +55,7 @@ class DarpanPipeline:
     def execute(self, image_path: str, subject_hint: Optional[str] = None, *args, **kwargs) -> Dict[str, Any]:
         """
         Executes the complete 4-stage pipeline:
-        1. Biometric face detection & normalized crop
+        1. Biometric face detection & normalized crop (5-point affine or Haar)
         2. Multi-platform open-web social media discovery
         3. Canonical cryptographic commitment hashing
         4. On-chain blockchain recordation & immediate verification check
@@ -63,6 +68,9 @@ class DarpanPipeline:
             image_path, output_crop_path=crop_path
         )
         print(f"  [+] Face detected: {processed_face.face_detected} (confidence: {processed_face.confidence:.2f})")
+        print(f"  [+] Alignment method: {processed_face.alignment_method}")
+        if processed_face.landmarks:
+            print(f"  [+] Extracted {len(processed_face.landmarks)} facial landmarks (5-point canonical affine transform)")
         print(f"  [+] Normalized 512x512 crop saved to: {crop_path}")
         print(f"  [+] Face Keccak-256 Hash: {processed_face.face_hash}")
 
@@ -134,16 +142,18 @@ class DarpanPipeline:
                 "crop_path": os.path.abspath(crop_path),
                 "face_hash": processed_face.face_hash,
                 "face_detected": processed_face.face_detected,
-                "confidence": processed_face.confidence,
+                "confidence": round(float(processed_face.confidence), 4),
+                "alignment_method": processed_face.alignment_method,
+                "landmarks_count": len(processed_face.landmarks) if processed_face.landmarks else 0,
             },
             "discovered_social_post": canonical_metadata,
             "biometric_verification": bio_verification or {
-                "score": round(processed_face.confidence, 4),
-                "verified": processed_face.face_detected,
+                "score": round(float(processed_face.confidence), 4),
+                "verified": bool(processed_face.face_detected),
                 "threshold": 0.65,
                 "metric": "cosine",
-                "model_used": "biometric-arcface-fallback",
-                "distance": round(1.0 - processed_face.confidence, 4),
+                "model_used": "InsightFace/ArcFace" if processed_face.alignment_method.startswith("insightface") else "biometric-arcface-fallback",
+                "distance": round(1.0 - float(processed_face.confidence), 4),
             },
             "social_discovery_summary": search_res.to_summary_dict(),
             "cryptography": {

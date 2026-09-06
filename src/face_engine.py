@@ -5,14 +5,23 @@ and computes cryptographic and perceptual biometrics.
 """
 import os
 import io
+import threading
 import cv2
 import numpy as np
 import requests
 from dataclasses import dataclass, field
-from typing import Optional, Tuple, Dict, Any, Union
-from PIL import Image
+from typing import Optional, Tuple, Dict, Any, Union, List
+from PIL import Image, ImageOps
 
 from .hasher import compute_face_hash
+
+# Optional InsightFace with ONNX Runtime
+try:
+    import insightface
+    from insightface.app import FaceAnalysis
+    HAS_INSIGHTFACE = True
+except (ImportError, Exception):
+    HAS_INSIGHTFACE = False
 
 # Optional deepface with ArcFace model
 try:
@@ -21,6 +30,58 @@ try:
 except (ImportError, Exception):
     HAS_DEEPFACE = False
 
+# Standard ArcFace canonical 5-point facial reference coordinates for 112x112
+ARCFACE_REF_112 = np.array([
+    [38.2946, 51.6963],  # Left Eye
+    [73.5318, 51.5014],  # Right Eye
+    [56.0252, 71.7366],  # Nose Tip
+    [41.5493, 92.3655],  # Left Mouth Corner
+    [70.7299, 92.2041],  # Right Mouth Corner
+], dtype=np.float32)
+
+_INSIGHTFACE_APPS: Dict[str, Any] = {}
+_INSIGHTFACE_LOCK = threading.Lock()
+
+
+def _get_insightface_app(model_name: str = "buffalo_sc") -> Optional[Any]:
+    """
+    Thread-safe module singleton for InsightFace FaceAnalysis.
+    Caches the ONNX runtime session across requests by model_name.
+    """
+    if not HAS_INSIGHTFACE:
+        return None
+    if model_name not in _INSIGHTFACE_APPS:
+        with _INSIGHTFACE_LOCK:
+            if model_name not in _INSIGHTFACE_APPS:
+                try:
+                    import warnings
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        app = FaceAnalysis(name=model_name, providers=["CPUExecutionProvider"])
+                        app.prepare(ctx_id=0, det_size=(640, 640))
+                        _INSIGHTFACE_APPS[model_name] = app
+                except Exception as e:
+                    print(f"[FaceEngine] Failed to initialize InsightFace ({model_name}): {e}")
+                    return None
+    return _INSIGHTFACE_APPS.get(model_name)
+
+
+def _pil_to_bgr(img_pil: Image.Image) -> np.ndarray:
+    """
+    Standardizes a PIL Image into a 3-channel BGR numpy array:
+    - Automatically adjusts EXIF orientation metadata.
+    - Normalizes Palette, Grayscale, CMYK, and RGBA into standard 3-channel BGR.
+    """
+    img_pil = ImageOps.exif_transpose(img_pil)
+    if img_pil.mode not in ("RGB", "RGBA", "L"):
+        img_pil = img_pil.convert("RGB")
+    arr = np.array(img_pil)
+    if arr.ndim == 2:
+        return cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+    elif arr.shape[2] == 4:
+        return cv2.cvtColor(arr, cv2.COLOR_RGBA2BGR)
+    return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
+
 
 @dataclass
 class BiometricSimilarity:
@@ -28,7 +89,7 @@ class BiometricSimilarity:
     verified: bool  # True if score >= threshold
     threshold: float  # Decision boundary threshold
     metric: str = "cosine"
-    model_used: str = "deepface/ArcFace"
+    model_used: str = "InsightFace/ArcFace"
     distance: float = 0.0  # Distance metric (1.0 - score)
     details: Dict[str, Any] = field(default_factory=dict)
 
@@ -54,6 +115,8 @@ class ProcessedFace:
     confidence: float
     dimensions: Tuple[int, int]  # (width, height)
     face_detected: bool
+    landmarks: Optional[List[Tuple[float, float]]] = None
+    alignment_method: str = "haar_box_crop"
 
 
 class FaceEngine:
@@ -61,11 +124,15 @@ class FaceEngine:
         self,
         target_size: Tuple[int, int] = (512, 512),
         similarity_threshold: float = 0.65,
+        prefer_insightface: bool = True,
         prefer_deepface: bool = True,
+        insightface_model: str = "buffalo_sc",
     ):
         self.target_size = target_size
         self.similarity_threshold = similarity_threshold
+        self.prefer_insightface = prefer_insightface
         self.prefer_deepface = prefer_deepface
+        self.insightface_model = insightface_model
         cascade_dir = cv2.data.haarcascades
         self.face_cascade = cv2.CascadeClassifier(
             os.path.join(cascade_dir, "haarcascade_frontalface_default.xml")
@@ -169,43 +236,121 @@ class FaceEngine:
         resized = cv2.resize(face_roi, self.target_size, interpolation=cv2.INTER_LANCZOS4)
         return resized
 
+    def align_face_5point(self, img_bgr: np.ndarray, kps: np.ndarray) -> np.ndarray:
+        """
+        Applies canonical 2D affine transformation (similarity transform)
+        mapping 5 detected facial landmarks onto standard ArcFace reference coordinates.
+        """
+        scale_x = self.target_size[0] / 112.0
+        scale_y = self.target_size[1] / 112.0
+        dst = ARCFACE_REF_112 * np.array([scale_x, scale_y], dtype=np.float32)
+
+        M, inliers = cv2.estimateAffinePartial2D(kps.astype(np.float32), dst, method=cv2.LMEDS)
+        if M is None:
+            bx1, by1 = np.min(kps, axis=0)
+            bx2, by2 = np.max(kps, axis=0)
+            bw = max(1, int(bx2 - bx1))
+            bh = max(1, int(by2 - by1))
+            bbox = (max(0, int(bx1)), max(0, int(by1)), bw, bh)
+            return self.extract_aligned_crop(img_bgr, bbox)
+
+        aligned = cv2.warpAffine(
+            img_bgr,
+            M,
+            self.target_size,
+            borderMode=cv2.BORDER_REFLECT101,
+            flags=cv2.INTER_LANCZOS4
+        )
+        return aligned
+
     def process_image(self, image_input, output_crop_path: Optional[str] = None) -> ProcessedFace:
         """
-        Processes an image from a file path or raw bytes, detects the face,
-        generates a normalized crop, and computes the cryptographic hash.
+        Processes an image from a file path, raw bytes, or numpy array, detects the face,
+        generates a normalized 512x512 crop using 5-point affine alignment or Haar bounding box,
+        and computes the cryptographic Keccak-256 face hash.
         """
-        if isinstance(image_input, (str, bytes, bytearray)):
+        if isinstance(image_input, (str, bytes, bytearray, np.ndarray)):
             if isinstance(image_input, str):
                 if not os.path.exists(image_input):
                     raise FileNotFoundError(f"Input image not found: {image_input}")
-                img_bgr = cv2.imread(image_input)
                 original_path = image_input
+            elif isinstance(image_input, np.ndarray):
+                original_path = "<numpy_array>"
             else:
-                nparr = np.frombuffer(image_input, np.uint8)
-                img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 original_path = "<memory_buffer>"
         else:
-            raise TypeError("Expected image path (str) or raw image bytes")
+            raise TypeError("Expected image path (str), raw image bytes, or numpy ndarray")
 
+        img_bgr = self._load_image(image_input)
         if img_bgr is None:
             raise ValueError("Could not decode image from provided input")
 
-        bbox = self.detect_face(img_bgr)
-        face_detected = bbox is not None
+        h_img, w_img = img_bgr.shape[:2]
+        bbox = None
+        confidence = 0.50
+        face_detected = False
+        landmarks = None
+        alignment_method = "haar_box_crop"
+        normalized_crop = None
 
-        if bbox is not None:
-            normalized_crop = self.extract_aligned_crop(img_bgr, bbox)
-            confidence = 0.96
-        else:
-            # Fallback: if no frontal cascade triggers, center crop to target size
-            h, w = img_bgr.shape[:2]
-            min_dim = min(h, w)
-            start_x = (w - min_dim) // 2
-            start_y = (h - min_dim) // 2
-            center_crop = img_bgr[start_y : start_y + min_dim, start_x : start_x + min_dim]
-            normalized_crop = cv2.resize(center_crop, self.target_size, interpolation=cv2.INTER_AREA)
-            bbox = (0, 0, w, h)
-            confidence = 0.50
+        # 1. Primary: InsightFace SCRFD with 5-point facial landmark detection & affine alignment
+        if self.prefer_insightface and HAS_INSIGHTFACE:
+            app = _get_insightface_app(self.insightface_model)
+            if app is not None:
+                try:
+                    faces = app.get(img_bgr)
+                    if faces and len(faces) > 0:
+                        center_x, center_y = w_img / 2.0, h_img / 2.0
+
+                        def _face_priority(f):
+                            bx1, by1, bx2, by2 = f.bbox
+                            bw = max(1.0, bx2 - bx1)
+                            bh = max(1.0, by2 - by1)
+                            area = bw * bh
+                            fc_x = (bx1 + bx2) / 2.0
+                            fc_y = (by1 + by2) / 2.0
+                            dist = np.hypot(fc_x - center_x, fc_y - center_y)
+                            return area / (1.0 + 0.002 * dist)
+
+                        best_face = max(faces, key=_face_priority)
+                        bx1, by1, bx2, by2 = [int(v) for v in best_face.bbox]
+                        bx1 = max(0, min(bx1, w_img - 1))
+                        by1 = max(0, min(by1, h_img - 1))
+                        bx2 = max(bx1 + 1, min(bx2, w_img))
+                        by2 = max(by1 + 1, min(by2, h_img))
+                        bbox = (bx1, by1, bx2 - bx1, by2 - by1)
+                        confidence = float(best_face.det_score) if hasattr(best_face, "det_score") else 0.98
+                        face_detected = True
+
+                        if hasattr(best_face, "kps") and best_face.kps is not None and len(best_face.kps) == 5:
+                            kps = best_face.kps
+                            landmarks = [(float(pt[0]), float(pt[1])) for pt in kps]
+                            normalized_crop = self.align_face_5point(img_bgr, kps)
+                            alignment_method = "insightface_5point_affine"
+                        elif bbox is not None:
+                            normalized_crop = self.extract_aligned_crop(img_bgr, bbox)
+                            alignment_method = "insightface_box_crop"
+                except Exception as e:
+                    print(f"[FaceEngine] InsightFace detection warning: {e}. Falling back to Haar.")
+
+        # 2. Secondary / Fallback: OpenCV Haar Cascade detection
+        if normalized_crop is None:
+            bbox = self.detect_face(img_bgr)
+            face_detected = bbox is not None
+
+            if bbox is not None:
+                normalized_crop = self.extract_aligned_crop(img_bgr, bbox)
+                confidence = 0.96
+                alignment_method = "haar_box_crop"
+            else:
+                min_dim = min(h_img, w_img)
+                start_x = (w_img - min_dim) // 2
+                start_y = (h_img - min_dim) // 2
+                center_crop = img_bgr[start_y : start_y + min_dim, start_x : start_x + min_dim]
+                normalized_crop = cv2.resize(center_crop, self.target_size, interpolation=cv2.INTER_AREA)
+                bbox = (0, 0, w_img, h_img)
+                confidence = 0.50
+                alignment_method = "center_fallback"
 
         # Encode normalized face to PNG format (lossless) for deterministic bytes
         success, encoded_bytes = cv2.imencode(".png", normalized_crop)
@@ -228,6 +373,8 @@ class FaceEngine:
             confidence=confidence,
             dimensions=self.target_size,
             face_detected=face_detected,
+            landmarks=landmarks,
+            alignment_method=alignment_method,
         )
 
     def _load_image(
@@ -236,28 +383,32 @@ class FaceEngine:
         """
         Safely loads an image from a local file path, remote HTTP/HTTPS URL,
         raw byte buffer, existing ProcessedFace instance, or numpy array.
+        Normalizes color space to BGR (3 channels) and fixes EXIF orientation.
         """
-        if isinstance(image_input, ProcessedFace):
-            if image_input.face_crop_bytes:
-                nparr = np.frombuffer(image_input.face_crop_bytes, np.uint8)
-                return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            elif image_input.face_crop_path and os.path.exists(image_input.face_crop_path):
-                return cv2.imread(image_input.face_crop_path)
-            elif os.path.exists(image_input.original_path):
-                return cv2.imread(image_input.original_path)
-            return None
+        try:
+            if isinstance(image_input, ProcessedFace):
+                if image_input.original_path and os.path.exists(image_input.original_path):
+                    return self._load_image(image_input.original_path)
+                elif image_input.face_crop_bytes:
+                    return self._load_image(image_input.face_crop_bytes)
+                elif image_input.face_crop_path and os.path.exists(image_input.face_crop_path):
+                    return self._load_image(image_input.face_crop_path)
+                return None
 
-        if isinstance(image_input, np.ndarray):
-            return image_input
+            if isinstance(image_input, np.ndarray):
+                arr = image_input
+                if arr.ndim == 2:
+                    return cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+                elif arr.shape[2] == 4:
+                    return cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
+                return arr
 
-        if isinstance(image_input, (bytes, bytearray)):
-            nparr = np.frombuffer(image_input, np.uint8)
-            return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if isinstance(image_input, (bytes, bytearray)):
+                img_pil = Image.open(io.BytesIO(image_input))
+                return _pil_to_bgr(img_pil)
 
-        if isinstance(image_input, str):
-            # Remote web photo URL
-            if image_input.startswith("http://") or image_input.startswith("https://"):
-                try:
+            if isinstance(image_input, str):
+                if image_input.startswith("http://") or image_input.startswith("https://"):
                     headers = {
                         "User-Agent": (
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -266,18 +417,20 @@ class FaceEngine:
                     }
                     resp = requests.get(image_input, headers=headers, timeout=10)
                     if resp.status_code == 200:
-                        nparr = np.frombuffer(resp.content, np.uint8)
-                        return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                    else:
-                        print(f"[FaceEngine] Web image download returned status {resp.status_code}")
-                        return None
-                except Exception as e:
-                    print(f"[FaceEngine] Error fetching image URL '{image_input}': {e}")
+                        content_type = resp.headers.get("content-type", "")
+                        if "image" not in content_type and len(resp.content) > 15 * 1024 * 1024:
+                            return None
+                        img_pil = Image.open(io.BytesIO(resp.content))
+                        return _pil_to_bgr(img_pil)
                     return None
 
-            # Local path
-            if os.path.exists(image_input):
-                return cv2.imread(image_input)
+                if os.path.exists(image_input):
+                    img_pil = Image.open(image_input)
+                    return _pil_to_bgr(img_pil)
+
+        except Exception as e:
+            print(f"[FaceEngine] Error loading image: {e}")
+            return None
 
         return None
 
@@ -313,17 +466,55 @@ class FaceEngine:
         embedding = feat_centered / (norm + 1e-8)
         return embedding.astype(np.float32)
 
+    def _extract_insight_embedding(self, img_bgr: np.ndarray) -> Optional[np.ndarray]:
+        """
+        Extracts 512-D unit-normalized feature vector using InsightFace.
+        If face detection succeeds on the image, extracts the primary face embedding.
+        If the image is an already-aligned/cropped face (where whole-scene detector finds 0 faces),
+        feeds the 112x112 resize directly into the ArcFace recognition model.
+        """
+        app = _get_insightface_app(self.insightface_model)
+        if app is None:
+            return None
+        try:
+            faces = app.get(img_bgr)
+            if faces and len(faces) > 0:
+                best_face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+                if hasattr(best_face, "embedding") and best_face.embedding is not None:
+                    emb = np.array(best_face.embedding, dtype=np.float32).flatten()
+                    norm = np.linalg.norm(emb)
+                    if norm > 1e-8:
+                        return (emb / norm).astype(np.float32)
+
+            # Direct recognition inference on tightly cropped faces
+            rec_model = app.models.get("recognition")
+            if rec_model is not None:
+                crop_112 = cv2.resize(img_bgr, (112, 112), interpolation=cv2.INTER_AREA)
+                feat = rec_model.get_feat(crop_112).flatten()
+                norm = np.linalg.norm(feat)
+                if norm > 1e-8:
+                    return (feat / norm).astype(np.float32)
+        except Exception as e:
+            print(f"[FaceEngine] InsightFace embedding extraction error: {e}")
+        return None
+
     def extract_embedding(
         self, image_input: Union[str, bytes, bytearray, np.ndarray, ProcessedFace]
     ) -> np.ndarray:
         """
         Extracts a normalized 512-dimensional ArcFace embedding vector.
-        Uses DeepFace (ArcFace model) when available, falling back gracefully
-        to the native spatial biometric embedding.
+        Tier 1: InsightFace ArcFace ONNX (MobileFaceNet/ResNet)
+        Tier 2: DeepFace ArcFace
+        Tier 3: Native CLAHE + Spatial HOG 512-D descriptor
         """
         img = self._load_image(image_input)
         if img is None:
             raise ValueError(f"Could not load or decode image from {type(image_input)}")
+
+        if self.prefer_insightface and HAS_INSIGHTFACE:
+            emb = self._extract_insight_embedding(img)
+            if emb is not None:
+                return emb
 
         crop = self._prepare_face_crop(img)
 
@@ -336,10 +527,10 @@ class FaceEngine:
                     enforce_detection=False,
                 )
                 if reps and "embedding" in reps[0]:
-                    emb = np.array(reps[0]["embedding"], dtype=np.float32)
+                    emb = np.array(reps[0]["embedding"], dtype=np.float32).flatten()
                     norm = np.linalg.norm(emb)
                     if norm > 1e-8:
-                        return emb / norm
+                        return (emb / norm).astype(np.float32)
             except Exception as e:
                 print(f"[FaceEngine] DeepFace ArcFace represent failed: {e}. Falling back to native embedding.")
 
@@ -371,10 +562,33 @@ class FaceEngine:
                 details={"error": f"Failed to load or retrieve {missing}"},
             )
 
+        # 1. Attempt InsightFace with ArcFace ONNX if available and preferred
+        if self.prefer_insightface and HAS_INSIGHTFACE:
+            v1 = self._extract_insight_embedding(img1)
+            v2 = self._extract_insight_embedding(img2)
+            if v1 is not None and v2 is not None:
+                cos_sim = float(np.dot(v1, v2))
+                score = float(np.clip(cos_sim, 0.0, 1.0))
+                distance = float(np.clip(1.0 - score, 0.0, 1.0))
+                verified = score >= self.similarity_threshold
+                return BiometricSimilarity(
+                    score=score,
+                    verified=verified,
+                    threshold=self.similarity_threshold,
+                    metric="cosine",
+                    model_used=f"InsightFace/ArcFace ({self.insightface_model})",
+                    distance=distance,
+                    details={
+                        "engine": "insightface",
+                        "model": self.insightface_model,
+                        "embedding_dim": len(v1),
+                    },
+                )
+
         crop1 = self._prepare_face_crop(img1)
         crop2 = self._prepare_face_crop(img2)
 
-        # 1. Attempt DeepFace with ArcFace model if available and preferred
+        # 2. Attempt DeepFace with ArcFace model if available and preferred
         if self.prefer_deepface and HAS_DEEPFACE:
             try:
                 rgb1 = cv2.cvtColor(crop1, cv2.COLOR_BGR2RGB)

@@ -853,8 +853,10 @@ with tab_pipeline:
         # Biometric similarity telemetry
         bio_info = rc.get("biometric_verification", {})
         bio_similarity = bio_info.get("score", rc['input_image']['confidence'])
-        bio_model = bio_info.get("model_used", "ArcFace")
+        bio_model = bio_info.get("model_used", "InsightFace/ArcFace")
         bio_verified = bio_info.get("verified", True)
+        align_method = rc["input_image"].get("alignment_method", "insightface_5point_affine")
+        landmarks_count = rc["input_image"].get("landmarks_count", 5)
 
         # 4-Up High-Contrast Telemetry Bar
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -863,6 +865,7 @@ with tab_pipeline:
             <div class="telemetry-card">
                 <span class="card-label">ARCFACE BIOMETRICS</span>
                 <span class="card-number" style="color: #00FFA3;">{bio_similarity*100:.1f}%</span>
+                <span style="font-size: 0.64rem; color: #94A3B8; margin-top: 4px;">{bio_model.split(' ')[0]}</span>
             </div>
             """)
         with col_m2:
@@ -900,10 +903,15 @@ with tab_pipeline:
                 st.image(crop_file, width=260)
 
             # ArcFace Biometric Score Pill
+            model_tag = "InsightFace ArcFace" if "InsightFace" in bio_model else bio_model
+            align_tag = f"5-Point Affine Aligned ({landmarks_count} pts)" if "affine" in align_method else "Haar Viewfinder"
             render_html(f"""
-            <div style="margin: 8px 0; padding: 7px 12px; background: rgba(0, 255, 163, 0.08); border-radius: 8px; border: 1px solid rgba(0, 255, 163, 0.25); display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.78rem; color: #94A3B8;">ArcFace Match</span>
-                <span style="font-size: 0.84rem; font-weight: 700; color: #00FFA3;">{bio_similarity*100:.1f}% {'(VERIFIED ✓)' if bio_verified else ''}</span>
+            <div style="margin: 8px 0; padding: 8px 12px; background: rgba(0, 255, 163, 0.08); border-radius: 8px; border: 1px solid rgba(0, 255, 163, 0.25); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #F8FAFC;">{model_tag}</div>
+                    <div style="font-size: 0.67rem; color: #00E5FF; margin-top: 2px;">🎯 {align_tag}</div>
+                </div>
+                <span style="font-size: 0.88rem; font-weight: 800; color: #00FFA3;">{bio_similarity*100:.1f}% {'(VERIFIED ✓)' if bio_verified else ''}</span>
             </div>
             """)
 
