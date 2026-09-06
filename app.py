@@ -23,7 +23,17 @@ load_dotenv(dotenv_path=env_file if os.path.exists(env_file) else None)
 # Ensure project root in sys.path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from src.pipeline import DarpanPipeline, VeriFacePipeline
+try:
+    from src.pipeline import DarpanPipeline, VeriFacePipeline
+except ImportError:
+    import importlib
+    import sys
+    if "src.pipeline" in sys.modules:
+        importlib.reload(sys.modules["src.pipeline"])
+    if "src" in sys.modules:
+        importlib.reload(sys.modules["src"])
+    from src.pipeline import DarpanPipeline, VeriFacePipeline
+
 from src.face_engine import FaceEngine
 from src.hasher import compute_face_hash, compute_metadata_hash, compute_attestation_id
 from src.blockchain_service import BlockchainService

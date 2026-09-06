@@ -171,3 +171,5 @@ class DarpanPipeline:
 
 # Backward compatibility alias
 VeriFacePipeline = DarpanPipeline
+
+__all__ = ["DarpanPipeline", "VeriFacePipeline"]
