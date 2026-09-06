@@ -4,6 +4,7 @@ Unit tests for the social media and web search gateway with dynamic identity res
 from src.social_search import (
     identify_social_platform,
     extract_author_handle,
+    extract_clean_identity_name,
     SearchGateway,
     DynamicIdentityResolver,
     resolve_wikidata_socials,
@@ -102,4 +103,20 @@ def test_search_gateway_handle_hint():
     urls = [m.post_url for m in res.all_matches]
     assert any("x.com/creator_user" in u for u in urls)
     assert any("instagram.com/creator_user" in u for u in urls)
+
+
+def test_extract_clean_identity_name_founders():
+    assert extract_clean_identity_name("Guillermo Rauch - CEO & Founder - Vercel | LinkedIn") == "Guillermo Rauch"
+    assert extract_clean_identity_name("Alexandr Wang (@alexandr_wang) / X") == "Alexandr Wang"
+    assert extract_clean_identity_name("Pieter Levels (@levelsio) on X: 'Just launched my new AI startup...'") == "Pieter Levels"
+    assert extract_clean_identity_name("Nikita Bier, Founder of Gas and tbh - TechCrunch") == "Nikita Bier"
+    assert extract_clean_identity_name("Amjad Masad - Replit CEO on The Joe Rogan Experience - YouTube") == "Amjad Masad"
+
+
+def test_identify_tech_platforms():
+    assert identify_social_platform("https://substack.com/@techfounder") == "Substack"
+    assert identify_social_platform("https://techcrunch.com/2023/10/founder-series/") == "TechCrunch"
+    assert identify_social_platform("https://www.producthunt.com/@levelsio") == "Product Hunt"
+    assert identify_social_platform("https://news.ycombinator.com/user?id=rauchg") == "Hacker News"
+
 

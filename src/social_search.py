@@ -47,7 +47,7 @@ class SearchResult:
     search_engine_used: str = "Dynamic Multi-Engine"
 
 
-# Target social media domain recognition map
+# Target social media and tech identity domain recognition map
 SOCIAL_DOMAINS = {
     "twitter.com": "X (Twitter)",
     "x.com": "X (Twitter)",
@@ -60,6 +60,10 @@ SOCIAL_DOMAINS = {
     "medium.com": "Medium",
     "youtube.com": "YouTube",
     "tiktok.com": "TikTok",
+    "substack.com": "Substack",
+    "techcrunch.com": "TechCrunch",
+    "producthunt.com": "Product Hunt",
+    "news.ycombinator.com": "Hacker News",
 }
 
 
@@ -74,6 +78,46 @@ def identify_social_platform(url: str) -> Optional[str]:
     except Exception:
         pass
     return None
+
+
+def extract_clean_identity_name(raw_title: str) -> str:
+    """
+    Cleans messy search titles from Google Lens / Bing into pure human names.
+    e.g. 'Guillermo Rauch - CEO & Founder - Vercel | LinkedIn' -> 'Guillermo Rauch'
+    e.g. 'Alexandr Wang (@alexandr_wang) / X' -> 'Alexandr Wang'
+    """
+    if not raw_title:
+        return ""
+    t = raw_title.strip()
+    # 1. Strip trailing platform or publisher tags
+    t = re.sub(
+        r"\s*(\||\-|\/|•|–|—)\s*(LinkedIn|Twitter|X|Instagram|YouTube|GitHub|Facebook|TechCrunch|Forbes|Medium|Substack|Crunchbase|Wikipedia|The Verge|Wired|Bloomberg).*$",
+        "",
+        t,
+        flags=re.IGNORECASE,
+    )
+    # 2. Strip handle mentions e.g. (@handle) or @handle
+    t = re.sub(r"\(?@[\w\d_\-\.]+\)?", "", t)
+    # 3. Strip social action phrases e.g. "on X: ...", "on Twitter: ..."
+    t = re.sub(r"\s+on\s+(X|Twitter|LinkedIn|Instagram|YouTube|Facebook|GitHub)\b.*$", "", t, flags=re.IGNORECASE)
+    # 4. Strip leading descriptors like "Who is...", "Photo of...", "Interview with..."
+    t = re.sub(r"^(who is|interview with|photo of|meet|profile:?)\s+", "", t, flags=re.IGNORECASE)
+    # 5. Strip role titles after dash/colon/comma e.g. "Amjad Masad - Replit CEO" -> "Amjad Masad"
+    t = re.split(
+        r"\s*(\-|\:|–|—|,)\s*(?:[A-Za-z0-9_\s]{0,20}?\s*)?(ceo|founder|co-founder|cto|cfo|engineer|author|creator|director|president|partner|investor|host|podcast|writer|developer)\b",
+        t,
+        flags=re.IGNORECASE,
+    )[0]
+    # 6. If dash still exists and left side looks like a 2-4 word human name, take the left side
+    if any(sep in t for sep in [" - ", " – ", " — ", " : "]):
+        parts = re.split(r"\s*(\-|\:|–|—)\s*", t)
+        first_part = parts[0].strip()
+        words = first_part.split()
+        if 2 <= len(words) <= 4 and all(w[0].isupper() for w in words if w.isalpha()):
+            t = first_part
+    # 7. Remove quotes or stray punctuation
+    t = t.strip(" \"':-–—|")
+    return t
 
 
 def extract_author_handle(url: str, platform: str) -> str:
@@ -93,6 +137,10 @@ def extract_author_handle(url: str, platform: str) -> str:
             return f"u/{path[1]}" if path[0] == "user" else f"r/{path[1]}"
         elif platform == "YouTube" and len(path) >= 1:
             return f"@{path[0]}" if path[0].startswith("@") else f"{path[0]}/{path[1] if len(path) > 1 else ''}"
+        elif platform in ["TechCrunch", "Substack", "Product Hunt", "Hacker News"]:
+            if len(path) >= 1:
+                return f"@{path[-1][:20]}"
+            return f"@{platform.lower().replace(' ', '')}"
     except Exception:
         pass
     return "@discovered_user"
@@ -524,20 +572,27 @@ class SerperProvider(BaseSearchProvider):
                     confidence_score=0.91,
                 ))
 
-        # If knowledgeGraph or top visual match mentions an entity, enrich via Wikidata
-        resolved_name = entity_title or subject_hint
-        if not resolved_name and data.get("visualMatches"):
-            resolved_name = data["visualMatches"][0].get("title")
+        # 3. Intelligent Entity / Founder Name Extraction from visualMatches & knowledgeGraph
+        candidate_name = entity_title or subject_hint
+        if not candidate_name and data.get("visualMatches"):
+            for vm in data.get("visualMatches", []):
+                raw_t = vm.get("title", "")
+                cleaned = extract_clean_identity_name(raw_t)
+                if cleaned and len(cleaned.split()) >= 2 and not is_generic_search_title(cleaned):
+                    candidate_name = cleaned
+                    break
 
-        if resolved_name:
-            clean_res = resolved_name.strip()
+        if candidate_name:
+            clean_res = extract_clean_identity_name(candidate_name)
+            self.last_detected_entity = clean_res
+
             # If hint is a direct URL
-            if clean_res.startswith("http://") or clean_res.startswith("https://"):
-                plat = identify_social_platform(clean_res) or "Web Profile"
-                handle = extract_author_handle(clean_res, plat)
+            if candidate_name.startswith("http://") or candidate_name.startswith("https://"):
+                plat = identify_social_platform(candidate_name) or "Web Profile"
+                handle = extract_author_handle(candidate_name, plat)
                 matches.append(SocialMatch(
                     platform=plat,
-                    post_url=clean_res,
+                    post_url=candidate_name,
                     author_handle=handle,
                     post_title=f"{handle} on {plat}",
                     snippet="Verified profile linked via identity hint.",
@@ -546,8 +601,8 @@ class SerperProvider(BaseSearchProvider):
                     confidence_score=0.99,
                 ))
             # If hint is a handle
-            elif clean_res.startswith("@") or (len(clean_res.split()) == 1 and "." not in clean_res and len(clean_res) >= 2):
-                clean_handle = clean_res.lstrip("@").strip()
+            elif candidate_name.startswith("@") or (len(candidate_name.split()) == 1 and "." not in candidate_name and len(candidate_name) >= 2):
+                clean_handle = candidate_name.lstrip("@").strip()
                 existing_platforms = {m.platform for m in matches}
                 for plat, url, handle in [
                     ("X (Twitter)", f"https://x.com/{clean_handle}", f"@{clean_handle}"),
@@ -567,16 +622,13 @@ class SerperProvider(BaseSearchProvider):
                             confidence_score=0.95,
                         ))
             else:
-                _, _, wiki_matches = resolve_wikidata_socials(resolved_name, image_url)
-                matches.extend(wiki_matches)
-
-                # Search Serper web for social profiles
+                # Direct Google search for tech founder / person verified socials
                 if self.api_key:
                     try:
                         s_resp = requests.post(
                             "https://google.serper.dev/search",
                             headers={"X-API-KEY": self.api_key, "Content-Type": "application/json"},
-                            json={"q": f"{resolved_name} (site:instagram.com OR site:twitter.com OR site:x.com OR site:linkedin.com OR site:github.com)"},
+                            json={"q": f'"{clean_res}" (site:twitter.com OR site:x.com OR site:linkedin.com OR site:github.com OR site:instagram.com OR site:youtube.com)'},
                             timeout=8
                         )
                         if s_resp.status_code == 200:
@@ -589,13 +641,19 @@ class SerperProvider(BaseSearchProvider):
                                         post_url=link,
                                         author_handle=extract_author_handle(link, plat),
                                         post_title=item.get("title", f"Discovered {plat} Profile"),
-                                        snippet=item.get("snippet", f"Search match for {resolved_name} on {plat}."),
+                                        snippet=item.get("snippet", f"Verified online presence for {clean_res}."),
                                         matched_image_url=image_url,
                                         discovery_timestamp=now,
                                         confidence_score=0.94,
                                     ))
                     except Exception as e:
-                        print(f"[SerperProvider] Hint web search error: {e}")
+                        print(f"[SerperProvider] Google Web query failed: {e}")
+
+                # Optional Wikidata enrichment (for celebrities / notable figures)
+                _, _, wiki_matches = resolve_wikidata_socials(clean_res, image_url)
+                for wm in wiki_matches:
+                    if not any(m.post_url.rstrip("/") == wm.post_url.rstrip("/") for m in matches):
+                        matches.append(wm)
 
         return matches
 
@@ -689,15 +747,19 @@ class DynamicIdentityResolver(BaseSearchProvider):
                             confidence_score=0.95,
                         ))
 
-            # C) Name / query entity:
+            # C) Name / query entity: clean and resolve
             else:
-                canon_name, bio, wiki_matches = resolve_wikidata_socials(detected_entity, image_url)
+                clean_name = extract_clean_identity_name(detected_entity)
+                if clean_name:
+                    self.last_detected_entity = clean_name
+
+                canon_name, bio, wiki_matches = resolve_wikidata_socials(clean_name, image_url)
                 if canon_name:
                     self.last_detected_entity = canon_name
                 matches.extend(wiki_matches)
 
-                # Also search open web for active networks
-                ddg_matches = search_duckduckgo_socials(f"{detected_entity} official twitter instagram linkedin", image_url)
+                # Search open web for active networks without restrictive 'official' keyword
+                ddg_matches = search_duckduckgo_socials(f'"{clean_name}" twitter OR linkedin OR github', image_url)
                 for dm in ddg_matches:
                     if not any(m.post_url.rstrip("/") == dm.post_url.rstrip("/") for m in matches):
                         matches.append(dm)
