@@ -35,47 +35,33 @@ The pipeline moves deterministically through 5 stages, from raw pixels to crypto
 
 ```mermaid
 flowchart TD
-    subgraph S1["Stage 1: Biometric Computer Vision"]
-        A["📷 Raw Face Portrait Scan"] --> B["OpenCV Landmark Normalization (512×512)"]
-        B --> C["ArcFace Biometric Embeddings & Keccak-256 Hash"]
-    end
+    S1["<b>Stage 1: Biometric Computer Vision</b><br/>• 📷 Raw Portrait Face Ingestion<br/>• OpenCV Haar Cascade Landmark Alignment (512×512)<br/>• ArcFace Feature Extraction & Biometric Embeddings<br/>• Keccak-256 Non-Invertible Face Hash (bytes32)"]
+    
+    S2["<b>Stage 2: Federated Multi-Engine OSINT</b><br/>• Search Gateway (all-engines federated mode)<br/>• Yandex Visual Search + Bing Visual + Google Lens<br/>• Wikidata Knowledge Graph Entity Resolution<br/>• Aggregated Social Identity Graph (X, LinkedIn, IG)"]
+    
+    S3["<b>Stage 3: Canonical Cryptography</b><br/>• RFC 8785 JSON Canonicalization Scheme (JCS)<br/>• Deterministic Canonical Metadata Hash (bytes32)<br/>• Commitment Attestation ID = keccak256(faceHash || metaHash)"]
+    
+    S4["<b>Stage 4: EVM Blockchain Settlement</b><br/>• FaceAttestationRegistry.sol (Solidity ^0.8.20)<br/>• Zero Biometric PII On-Chain (GDPR Article 9 & 17)<br/>• Immutable Transaction Mined (Base Sepolia / Local EVM)"]
+    
+    S5{"<b>Stage 5: Zero-Trust Tamper Audit</b><br/>Bit-for-bit mathematical parity verification"}
+    
+    PASS["✅ <b>Proof Valid (Consensus Match)</b><br/>Source data matches on-chain commitment exactly"]
+    FAIL["🚨 <b>Tamper Detected (Transaction Reverted)</b><br/>1-byte mutation triggers cryptographic divergence"]
 
-    subgraph S2["Stage 2: Federated Multi-Engine OSINT"]
-        D["Multi-Engine Gateway (all-engines)"]
-        D --> E["Yandex Visual Search + Bing + Google Lens"]
-        E --> F["Aggregated Social Identity Graph (X, LinkedIn, IG)"]
-    end
+    S1 -->|"Normalized Face Hash (bytes32)"| S2
+    S2 -->|"Canonical Social Metadata"| S3
+    S3 -->|"Commitment Attestation ID (bytes32)"| S4
+    S4 -->|"On-Chain Transaction & Receipt"| S5
+    S5 -->|"Untampered (100% Parity)"| PASS
+    S5 -->|"Altered (Hash Mismatch)"| FAIL
 
-    subgraph S3["Stage 3: Canonical Cryptography"]
-        G["RFC 8785 Canonical JSON Serialization (JCS)"]
-        G --> H["Deterministic Metadata Hash (32-byte bytes32)"]
-        H --> I["Commitment Attestation ID = keccak256(faceHash || metaHash)"]
-    end
-
-    subgraph S4["Stage 4: EVM Blockchain Settlement"]
-        J["FaceAttestationRegistry.sol (Smart Contract)"]
-        J --> K["⛓️ Mined Block Transaction (Base Sepolia / Local EVM)"]
-    end
-
-    subgraph S5["Stage 5: Verification & Tamper Audit"]
-        L["Zero-Trust Cryptographic Audit Comparator"]
-        L --> M{"Parity Check"}
-        M -->|Untampered| N["✅ Proof Valid (Consensus Match)"]
-        M -->|Altered Data| O["❌ Tamper Detected (Reverted)"]
-    end
-
-    C --> D
-    F --> G
-    I --> J
-    K --> L
-
-    style S1 fill:#0D1117,stroke:#00FFA3,stroke-width:1.5px,color:#fff
-    style S2 fill:#0D1117,stroke:#38BDF8,stroke-width:1.5px,color:#fff
-    style S3 fill:#0D1117,stroke:#A855F7,stroke-width:1.5px,color:#fff
-    style S4 fill:#0D1117,stroke:#FFB800,stroke-width:1.5px,color:#fff
-    style S5 fill:#0D1117,stroke:#10B981,stroke-width:1.5px,color:#fff
-    style N fill:#00FFA3,stroke:#00FFA3,color:#000
-    style O fill:#EF4444,stroke:#EF4444,color:#fff
+    style S1 fill:#0D191F,stroke:#00FFA3,stroke-width:2px,color:#fff;
+    style S2 fill:#0D1924,stroke:#38BDF8,stroke-width:2px,color:#fff;
+    style S3 fill:#191124,stroke:#A855F7,stroke-width:2px,color:#fff;
+    style S4 fill:#241C0D,stroke:#FFB800,stroke-width:2px,color:#fff;
+    style S5 fill:#0F172A,stroke:#64748B,stroke-width:2px,color:#fff;
+    style PASS fill:#003B26,stroke:#00FFA3,stroke-width:2px,color:#00FFA3;
+    style FAIL fill:#3B0A12,stroke:#FF2A55,stroke-width:2px,color:#FF2A55;
 ```
 
 ---
