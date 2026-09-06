@@ -211,6 +211,18 @@ GENERIC_SEARCH_PATTERNS = [
     r"^search\s+results?.*$",
 ]
 
+NON_HUMAN_PATTERNS = [
+    # E-commerce, apparel, fabrics, fashion products
+    r"\b(sherwani|kurta|jacket|dress|attire|saree|suit|lehenga|shirt|t-shirt|clothing|wear|fashion|outfit|costume|fabric|blazer|hoodie|pants|trousers|jeans|footwear|shoes|kurti|churidar|dhoti|dupatta|stole|pajama|pajamas|nehru|bandhgala|brocade|silk|cotton|linen|zardosi|embroidered|embroidery)\b",
+    r"\b(buy|shop|sale|discount|price|order|online|store|amazon|etsy|ebay|manyavar|flipkart|walmart|pernia|myntra|ajio|tatacliq)\b",
+    # Photography / Headshots / Stock tutorials / descriptors
+    r"\b(headshot|headshots|photography|portrait|photo|picture|tips|tutorial|guide|ideas|poses|examples|studio|lighting|session|session tips|model)\b",
+    # Generic photo descriptions / objects
+    r"\b(wallpaper|stock photo|clipart|vector|background|pattern|texture|portrait of|photo of|picture of|man in|woman in|boy in|girl in|person in|face of)\b",
+    r"\b(traditional indian|ethnic wear|party wear|wedding wear|groom wear|menswear|womenswear)\b",
+    r"\b(with boota|boota work|heavy embroidered|silk fabric|designer)\b",
+]
+
 
 def is_generic_search_title(title: str) -> bool:
     if not title or len(title.strip()) < 3:
@@ -218,6 +230,9 @@ def is_generic_search_title(title: str) -> bool:
     t = title.strip().lower()
     for pat in GENERIC_SEARCH_PATTERNS:
         if re.match(pat, t):
+            return True
+    for pat in NON_HUMAN_PATTERNS:
+        if re.search(pat, t):
             return True
     return False
 
@@ -516,7 +531,12 @@ class SerperProvider(BaseSearchProvider):
         self.api_key = api_key
         self.endpoint = "https://google.serper.dev/lens"
 
-    def search_face(self, image_path_or_url: str, subject_hint: Optional[str] = None) -> List[SocialMatch]:
+    def search_face(
+        self,
+        image_path_or_url: str,
+        subject_hint: Optional[str] = None,
+        fallback_image_path: Optional[str] = None
+    ) -> List[SocialMatch]:
         image_url = image_path_or_url
         if os.path.exists(image_path_or_url):
             hosted_url = upload_temp_image(image_path_or_url)
@@ -582,6 +602,9 @@ class SerperProvider(BaseSearchProvider):
 
         # 3. Intelligent Entity / Founder Name Extraction from visualMatches & knowledgeGraph
         candidate_name = entity_title or subject_hint
+        if candidate_name and is_generic_search_title(candidate_name):
+            candidate_name = subject_hint
+
         if not candidate_name and data.get("visualMatches"):
             for vm in data.get("visualMatches", []):
                 raw_t = vm.get("title", "")
@@ -590,7 +613,35 @@ class SerperProvider(BaseSearchProvider):
                     candidate_name = cleaned
                     break
 
-        if candidate_name:
+        # Fallback to cropped face image if primary returned zero matches and no entity
+        if not matches and not candidate_name and fallback_image_path and os.path.exists(fallback_image_path):
+            crop_url = upload_temp_image(fallback_image_path)
+            if crop_url and crop_url != image_url:
+                try:
+                    fb_resp = requests.post(self.endpoint, headers=headers, json={"url": crop_url}, timeout=10)
+                    if fb_resp.status_code == 200:
+                        fb_data = fb_resp.json()
+                        fb_kg = fb_data.get("knowledgeGraph", {})
+                        if fb_kg.get("title") and not is_generic_search_title(fb_kg.get("title")):
+                            candidate_name = fb_kg.get("title")
+                        for item in fb_data.get("organic", []) + fb_data.get("visualMatches", []):
+                            link = item.get("link", "")
+                            plat = identify_social_platform(link)
+                            if plat:
+                                matches.append(SocialMatch(
+                                    platform=plat,
+                                    post_url=link,
+                                    author_handle=extract_author_handle(link, plat),
+                                    post_title=item.get("title", "Visual Match Social Post"),
+                                    snippet=item.get("snippet", "Visual identity match on cropped face."),
+                                    matched_image_url=crop_url,
+                                    discovery_timestamp=now,
+                                    confidence_score=0.92,
+                                ))
+                except Exception as e:
+                    print(f"[SerperProvider] Fallback crop search failed: {e}")
+
+        if candidate_name and not is_generic_search_title(candidate_name):
             clean_res = extract_clean_identity_name(candidate_name)
             self.last_detected_entity = clean_res
 
@@ -874,7 +925,11 @@ class SearchGateway:
                     fallback_image_path=fallback_image_path
                 )
             else:
-                matches = self.provider.search_face(image_path_or_url, subject_hint=subject_hint)
+                matches = self.provider.search_face(
+                    image_path_or_url,
+                    subject_hint=subject_hint,
+                    fallback_image_path=fallback_image_path
+                )
 
             if hasattr(self.provider, "last_detected_entity") and self.provider.last_detected_entity:
                 detected_entity = self.provider.last_detected_entity
@@ -897,6 +952,10 @@ class SearchGateway:
                 fallback_image_path=fallback_image_path
             )
             detected_entity = fallback.last_detected_entity or detected_entity
+
+        # Sanitize entity name to reject clothing, apparel, or generic shopping titles
+        if detected_entity and is_generic_search_title(detected_entity):
+            detected_entity = None
 
         # Deduplicate matches by post_url, upgrading with higher-confidence entries
         unique_matches: List[SocialMatch] = []

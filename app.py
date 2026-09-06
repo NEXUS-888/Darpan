@@ -368,10 +368,18 @@ with tab_exec:
             if os.path.exists(image_path):
                 st.image(image_path, caption="Sample Evaluation Image (demo_face.jpg)", width=240)
 
+        st.markdown("""
+        <div style="background: rgba(14, 165, 233, 0.08); border-left: 3px solid #38BDF8; padding: 10px 14px; border-radius: 6px; margin: 12px 0 10px 0; font-size: 0.8rem; color: #CBD5E1; line-height: 1.4;">
+            <strong>💡 Identity Discovery Note:</strong><br/>
+            • <strong>Public Figures</strong>: Discovered automatically via global reverse visual search.<br/>
+            • <strong>Regular Users / Creators / Friends</strong>: Social networks (Instagram, LinkedIn, Facebook) strictly block search engines from reverse-indexing photos of regular accounts. To link their real account, provide their <code>@handle</code> or profile link below!
+        </div>
+        """, unsafe_allow_html=True)
+
         subject_hint_input = st.text_input(
-            "🔍 Identity Name, Handle, or Profile URL (Optional)",
-            placeholder="e.g. @your_username, Cristiano Ronaldo, or https://instagram.com/...",
-            help="Provide your name, social handle (e.g. @username), or profile URL to link your verified social media accounts."
+            "🔍 Social Handle, Profile URL, or Identity Name",
+            placeholder="e.g. @your_instagram_handle, in/linkedin_user, or Cristiano Ronaldo",
+            help="For normal people or creators, enter their Instagram/X/LinkedIn handle to cryptographically anchor their verified accounts to this biometric scan."
         )
 
     with col_action:
@@ -549,12 +557,12 @@ with tab_exec:
                             <span style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: #34D399;">On-Chain Anchored</span>
                         </div>
                         <h3 style="margin: 8px 0 2px 0; font-size: 1.15rem; color: #F8FAFC;">{post['author_handle']}</h3>
-                        <p style="margin: 0 0 6px 0; font-size: 0.85rem; color: #CBD5E1; font-weight: 500;">Zero Public Web Footprint</p>
+                        <p style="margin: 0 0 6px 0; font-size: 0.85rem; color: #CBD5E1; font-weight: 500;">Private / Non-Celebrity Identity</p>
                         <p style="margin: 0 0 10px 0; font-size: 0.8rem; color: #94A3B8; line-height: 1.4;">
-                            Subject face is private and not indexed on public search engines. Biometric facial hash is cryptographically signed and permanently anchored to EVM Block #{rc['blockchain']['block_number']}.
+                            Face successfully detected, normalized (512×512), and hashed on-chain. Public search engines (Google Lens, Bing) cannot reverse-search regular personal photos due to Instagram/LinkedIn CDN privacy walls.
                         </p>
                         <div style="background: rgba(2, 6, 23, 0.6); border-radius: 8px; padding: 8px 10px; font-size: 0.76rem; color: #94A3B8;">
-                            <strong>Attestation Status:</strong> <span style="color: #34D399;">✓ Verified On-Chain</span>
+                            <strong>Attestation Status:</strong> <span style="color: #34D399;">✓ Biometrically Verified On-Chain</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -577,9 +585,9 @@ with tab_exec:
                     )
 
                 st.markdown("""
-                <div style="background: rgba(30, 41, 59, 0.5); border: 1px dashed rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 0.76rem; color: #94A3B8;">
-                    💡 <strong>Link to your personal social profiles:</strong><br/>
-                    Enter your name, handle (e.g. <code>@your_name</code>), or profile URL in the <em>Identity / Search Hint</em> input in Step 1 and run the pipeline again.
+                <div style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 0.78rem; color: #E2E8F0; line-height: 1.4;">
+                    🔗 <strong>Link to your Instagram, X, or LinkedIn account:</strong><br/>
+                    Enter your handle (e.g. <code>@your_handle</code>) in the <em>Social Handle</em> input in Step 1 and run the pipeline again. The protocol will bind your real profiles directly to your biometric face hash on the blockchain!
                 </div>
                 """, unsafe_allow_html=True)
 

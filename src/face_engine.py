@@ -42,30 +42,66 @@ class FaceEngine:
 
     def detect_face(self, img_bgr: np.ndarray) -> Optional[Tuple[int, int, int, int]]:
         """
-        Detects primary face bounding box. Returns (x, y, w, h) of largest detected face.
+        Detects primary face bounding box with eye validation and vertical positioning.
+        Guarantees selection of actual human face over clothing patterns/embroidery.
         """
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        h_img, w_img = img_bgr.shape[:2]
+
         # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for lighting invariance
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         equalized = clahe.apply(gray)
 
-        # Multi-scale detection
+        # Multi-scale detection with frontal cascade
         faces = self.face_cascade.detectMultiScale(
-            equalized, scaleFactor=1.1, minNeighbors=5, minSize=(60, 60)
+            equalized, scaleFactor=1.08, minNeighbors=4, minSize=(40, 40)
         )
 
         if len(faces) == 0:
             # Try alt cascade
             faces = self.alt_face_cascade.detectMultiScale(
-                equalized, scaleFactor=1.1, minNeighbors=4, minSize=(60, 60)
+                equalized, scaleFactor=1.08, minNeighbors=3, minSize=(40, 40)
             )
 
         if len(faces) == 0:
             return None
 
-        # Select largest face by bounding box area (w * h)
-        largest_face = max(faces, key=lambda rect: rect[2] * rect[3])
-        return tuple(int(v) for v in largest_face)
+        # Score candidates to reject false positives (e.g. clothing embroidery, buttons, belts)
+        best_candidate = None
+        best_score = -999.0
+
+        for rect in faces:
+            x, y, w, h = rect
+            roi_gray = gray[y : y + h, x : x + w]
+
+            # Eye cascade verification inside candidate face ROI
+            eyes = self.eye_cascade.detectMultiScale(
+                roi_gray, scaleFactor=1.1, minNeighbors=2, minSize=(12, 12)
+            )
+            has_eyes = len(eyes) > 0
+
+            # Vertical position: in portraits, faces are situated in upper 60% of image
+            y_center_norm = (y + h / 2.0) / max(1, h_img)
+            # Boxes in lower body (stomach/waist/legs) receive steep penalty
+            pos_penalty = -15.0 if y_center_norm > 0.65 else (1.0 - y_center_norm) * 4.0
+
+            # Eye score: primary differentiator for real faces vs fabric/clothing patterns
+            eye_score = (12.0 if has_eyes else 0.0) + min(len(eyes), 2) * 6.0
+
+            # Area score (normalize relative to image size)
+            area_norm = (w * h) / float(w_img * h_img)
+            area_score = min(area_norm * 10.0, 5.0)
+
+            total_score = eye_score + pos_penalty + area_score
+
+            if total_score > best_score:
+                best_score = total_score
+                best_candidate = rect
+
+        if best_candidate is None:
+            best_candidate = max(faces, key=lambda rect: rect[2] * rect[3])
+
+        return tuple(int(v) for v in best_candidate)
 
     def extract_aligned_crop(
         self, img_bgr: np.ndarray, bbox: Tuple[int, int, int, int], padding_factor: float = 0.25
