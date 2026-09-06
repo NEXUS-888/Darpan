@@ -78,23 +78,54 @@ flowchart TD
 
 ---
 
-## 4. Quickstart Guide
+## 4. Quickstart Guide (Choose Your Preferred Setup)
 
-### Prerequisites
-- Python 3.10, 3.11, 3.12, or 3.14
-- Git
+### Option A: Docker Compose (Recommended — Zero Host Setup)
+Run anywhere with zero local dependency installation (no Python, OpenCV, or compilation tools required on host):
+```bash
+# 1. Clone repository
+git clone https://github.com/NEXUS-888/Kannadi.git
+cd Kannadi
 
-### Step 1: Clone & Install Dependencies
+# 2. Launch containerized stack
+docker compose up --build
+```
+> Access dashboard at **http://localhost:8501**. Models and output are automatically cached in Docker volumes.
+
+---
+
+### Option B: 1-Click Native Launcher (macOS & Linux)
 ```bash
 git clone https://github.com/NEXUS-888/Kannadi.git
 cd Kannadi
 
-# Install lightweight dependencies
-pip install -r requirements.txt
+# Automatically detects Python, sets up virtualenv, installs dependencies, & launches UI
+chmod +x run.sh
+./run.sh
 ```
 
-### Step 2: (Optional) Live Google Lens Search
-The pipeline includes an offline evaluation engine out-of-the-box. To enable live web queries via Google Lens:
+---
+
+### Option C: 1-Click Native Launcher (Windows)
+Double-click `run.bat` in File Explorer, or run in Command Prompt / PowerShell:
+```cmd
+git clone https://github.com/NEXUS-888/Kannadi.git
+cd Kannadi
+run.bat
+```
+
+---
+
+### Verify System Compatibility
+Check environment readiness, OpenCV GUI libraries, biometrics engine, and EVM smart contracts:
+```bash
+python scripts/verify_environment.py
+```
+
+---
+
+### Optional: Live Google Lens Visual Search
+The pipeline includes federated reverse visual search (DuckDuckGo, Yandex, Bing, & Wikidata) out of the box with zero configuration. To optionally enable Google Lens:
 1. Grab a free API key at [Serper.dev](https://serper.dev) (2,500 free queries, no credit card required).
 2. Create your local `.env`:
    ```bash
@@ -270,6 +301,11 @@ tests/test_social_search.py::test_progressive_wikidata_resolution_with_country_d
 
 ```text
 face_identification/
+├── Dockerfile                         # Production-ready multi-platform container
+├── docker-compose.yml                 # 1-command Docker Compose orchestration
+├── .dockerignore                      # Build context optimization
+├── run.sh                             # 1-click native launcher for macOS & Linux
+├── run.bat                            # 1-click native launcher for Windows
 ├── assets/
 │   └── banner.jpg                     # High-resolution 16:9 project banner
 ├── contracts/
@@ -284,12 +320,14 @@ face_identification/
 │   ├── blockchain_service.py          # Dual-engine EVM service (local & testnet)
 │   └── pipeline.py                    # 5-stage pipeline orchestrator
 ├── scripts/
+│   ├── verify_environment.py          # Cross-platform environment & portability diagnostics
 │   ├── run_pipeline.py                # Main CLI pipeline runner
 │   ├── verify_attestation.py          # Independent verification audit tool
 │   └── compile_contract.py            # Solidity compiler utility (py-solc-x)
 ├── samples/
 │   └── demo_face.jpg                  # Sample face image for testing
 ├── tests/
+│   ├── test_environment_portability.py# Cross-platform, container & launcher tests
 │   ├── test_face_engine.py            # Face detection & alignment tests
 │   ├── test_hasher.py                 # Cryptographic hashing & JCS tests
 │   ├── test_social_search.py          # Search gateway & platform parser tests

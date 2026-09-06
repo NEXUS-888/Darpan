@@ -1,0 +1,30 @@
+services:
+  kannadi-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kannadi-app
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    volumes:
+      # Mount output folder to persist generated face hashes and attestation cards
+      - ./output:/app/output
+      # Named volume to cache InsightFace / ONNX biometric models across restarts
+      - insightface_models:/home/appuser/.insightface
+    environment:
+      - PYTHONUNBUFFERED=1
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      # Optional: Serper API key for Google Lens visual reverse search
+      - SERPER_API_KEY=${SERPER_API_KEY:-}
+      # Optional: RPC URL for Ethereum network (defaults to local in-memory EVM if unset)
+      - RPC_URL=${RPC_URL:-}
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  insightface_models:
+    name: kannadi_insightface_models
