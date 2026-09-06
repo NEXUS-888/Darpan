@@ -1,9 +1,10 @@
 """
-VeriFace Protocol: Biometric Identity & Blockchain Attestation Console.
-Designed according to modern design engineering standards:
-- Utilitarian dark terminal aesthetic with concentric radii and optical alignment.
-- High-signal visual hierarchy: Ingestion -> Cryptographic Proof -> Social Graph -> EVM Consensus.
-- Real-time tamper-evidence audit and zero-knowledge privacy verification.
+Kannadi: Decentralized Biometric Mirror & Blockchain Attestation Console.
+Custom cyber-biometric interface featuring:
+- Obsidian Mirror & Electric Acid Mint (#00FFA3) / Solar Gold (#FFB800) contrast palette.
+- Animated HUD Biometric Laser Scanner with real-time scanline sweep across portrait viewfinders.
+- Living telemetry tickers, pulsating consensus heartbeat, and tactile micro-interactions.
+- Zero-clutter, high-signal cryptographic attestation and tamper audit comparator.
 """
 import os
 import sys
@@ -29,18 +30,18 @@ from src.blockchain_service import BlockchainService
 
 # Page configuration
 st.set_page_config(
-    page_title="VeriFace | Biometric Attestation",
-    page_icon="🛡️",
+    page_title="Kannadi // Biometric Mirror",
+    page_icon="🪞",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 # -----------------------------------------------------------------------------
-# DESIGN TOKENS & STYLES (Concentric radii, tabular nums, subtle depth)
+# BESPOKE CYBER-BIOMETRIC DESIGN SYSTEM & ANIMATIONS
 # -----------------------------------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -48,255 +49,417 @@ st.markdown("""
         -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Core background */
+    /* Base Canvas with Deep Void Grid Matrix */
     .stApp {
-        background-color: #090D16;
+        background-color: #030509;
+        background-image: 
+            radial-gradient(ellipse 85% 45% at 50% -15%, rgba(0, 255, 163, 0.12), transparent 70%),
+            radial-gradient(ellipse 50% 30% at 90% 45%, rgba(255, 184, 0, 0.05), transparent 60%),
+            linear-gradient(rgba(0, 255, 163, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 163, 0.035) 1px, transparent 1px);
+        background-size: 100% 100%, 100% 100%, 34px 34px, 34px 34px;
         color: #E2E8F0;
+    }
+
+    /* Keyframe Animations */
+    @keyframes laserScan {
+        0% { top: 2%; opacity: 0.2; }
+        20% { opacity: 1; }
+        50% { top: 95%; opacity: 1; }
+        80% { opacity: 1; }
+        100% { top: 2%; opacity: 0.2; }
+    }
+
+    @keyframes livePulseDot {
+        0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 255, 163, 0.7); }
+        70% { transform: scale(1.1); box-shadow: 0 0 0 9px rgba(0, 255, 163, 0); }
+        100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 255, 163, 0); }
+    }
+
+    @keyframes livePulseAmber {
+        0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7); }
+        70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(255, 184, 0, 0); }
+        100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 184, 0, 0); }
+    }
+
+    @keyframes tamperWarningStrobe {
+        0%, 100% { border-color: rgba(255, 42, 85, 0.9); box-shadow: 0 0 24px rgba(255, 42, 85, 0.35); }
+        50% { border-color: rgba(255, 42, 85, 0.3); box-shadow: 0 0 8px rgba(255, 42, 85, 0.1); }
+    }
+
+    @keyframes shimmerHover {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
     }
 
     /* Typography balancing */
     h1, h2, h3, h4, .brand-title {
         text-wrap: balance;
         font-family: 'Plus Jakarta Sans', sans-serif;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.03em;
     }
     p, span, label {
         text-wrap: pretty;
     }
 
-    /* Tabular numbers for all hashes, blocks, and counters */
-    .tabular-num, .hash-code, .metric-value {
+    /* Tabular numerals for telemetry & cryptographic hashes */
+    .tabular-num, .hash-code, .metric-value, .telemetry-data {
         font-variant-numeric: tabular-nums;
         font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Header Bar */
-    .header-bar {
+    /* Top Brand Navigation Header */
+    .kannadi-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 14px 22px;
-        background: rgba(17, 24, 39, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 16px 24px;
+        background: linear-gradient(180deg, rgba(12, 19, 31, 0.85) 0%, rgba(6, 10, 16, 0.95) 100%);
+        border: 1px solid rgba(0, 255, 163, 0.22);
         border-radius: 16px;
         margin-bottom: 22px;
-        backdrop-filter: blur(16px);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(0, 255, 163, 0.15);
     }
-    .header-left {
+    .kannadi-branding {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 16px;
     }
-    .header-logo {
-        width: 38px;
-        height: 38px;
-        background: linear-gradient(135deg, #0284C7 0%, #38BDF8 100%);
-        border-radius: 10px;
+    .kannadi-prism-icon {
+        width: 44px;
+        height: 44px;
+        background: linear-gradient(135deg, #00FFA3 0%, #00B4D8 50%, #0077B6 100%);
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.25rem;
-        box-shadow: 0 2px 10px rgba(2, 132, 199, 0.35);
+        font-size: 1.45rem;
+        box-shadow: 0 0 20px rgba(0, 255, 163, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    .header-title {
-        margin: 0;
-        font-size: 1.35rem;
-        font-weight: 800;
-        color: #F8FAFC;
-        letter-spacing: -0.03em;
-        line-height: 1.2;
-    }
-    .header-subtitle {
-        margin: 0;
-        font-size: 0.78rem;
-        color: #94A3B8;
-        font-weight: 500;
-    }
-    .header-right {
+    .kannadi-title-row {
         display: flex;
-        align-items: center;
+        align-items: baseline;
         gap: 10px;
     }
+    .kannadi-title {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        background: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 50%, #00FFA3 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
+        line-height: 1.1;
+    }
+    .kannadi-version-tag {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #00FFA3;
+        background: rgba(0, 255, 163, 0.12);
+        border: 1px solid rgba(0, 255, 163, 0.35);
+        padding: 2px 7px;
+        border-radius: 6px;
+        letter-spacing: 0.06em;
+    }
+    .kannadi-subtitle {
+        margin: 4px 0 0 0;
+        font-size: 0.76rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: #7DD3FC;
+        letter-spacing: 0.08em;
+    }
+    .kannadi-telemetry {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .telemetry-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+    .telemetry-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        color: #64748B;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+    .telemetry-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    .neon-amber {
+        color: #FFB800;
+        text-shadow: 0 0 10px rgba(255, 184, 0, 0.5);
+    }
+    .telemetry-divider {
+        width: 1px;
+        height: 28px;
+        background: rgba(255, 255, 255, 0.1);
+    }
 
-    /* Live status badge */
-    .live-pill {
+    /* Live Synchronized Pill with pulsing aura */
+    .live-node-pill {
         display: inline-flex;
         align-items: center;
-        gap: 7px;
-        background: rgba(16, 185, 129, 0.12);
-        color: #34D399;
-        border: 1px solid rgba(52, 211, 153, 0.25);
-        padding: 4px 12px;
+        gap: 8px;
+        background: rgba(0, 255, 163, 0.1);
+        color: #00FFA3;
+        border: 1px solid rgba(0, 255, 163, 0.35);
+        padding: 5px 12px;
         border-radius: 9999px;
-        font-size: 0.76rem;
-        font-weight: 600;
-        letter-spacing: 0.02em;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        box-shadow: 0 0 14px rgba(0, 255, 163, 0.2);
     }
-    .pulse-dot {
+    .live-pulse-dot {
         width: 7px;
         height: 7px;
         border-radius: 50%;
-        background-color: #34D399;
-        box-shadow: 0 0 8px #34D399;
+        background-color: #00FFA3;
+        animation: livePulseDot 1.8s infinite;
     }
 
-    .network-pill {
-        background: rgba(30, 41, 59, 0.7);
-        color: #94A3B8;
+    /* Dynamic Biometric Viewfinder: Animated Laser Scanning Frame */
+    div[data-testid="stImage"] {
+        position: relative;
+        border-radius: 14px !important;
+        overflow: hidden !important;
+        border: 1px solid rgba(0, 255, 163, 0.35) !important;
+        box-shadow: 0 0 25px rgba(0, 255, 163, 0.15), inset 0 0 15px rgba(0, 255, 163, 0.05);
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    div[data-testid="stImage"]:hover {
+        border-color: rgba(0, 255, 163, 0.7) !important;
+        box-shadow: 0 0 35px rgba(0, 255, 163, 0.3) !important;
+    }
+    div[data-testid="stImage"]::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, transparent 0%, #00FFA3 25%, #FFFFFF 50%, #00FFA3 75%, transparent 100%);
+        box-shadow: 0 0 14px #00FFA3, 0 0 24px #00FFA3;
+        animation: laserScan 2.6s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 10;
+    }
+    div[data-testid="stImage"]::before {
+        content: "BIO-HUD // TARGET ACQUIRED";
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.64rem;
+        font-weight: 700;
+        color: #00FFA3;
+        background: rgba(3, 5, 9, 0.88);
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 255, 163, 0.4);
+        letter-spacing: 0.1em;
+        z-index: 11;
+        pointer-events: none;
+        text-shadow: 0 0 8px rgba(0, 255, 163, 0.6);
+    }
+
+    /* Telemetry Metric Cards */
+    .telemetry-card {
+        background: linear-gradient(135deg, rgba(12, 18, 30, 0.9) 0%, rgba(6, 10, 17, 0.95) 100%);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 0.74rem;
-        font-weight: 500;
-    }
-
-    /* Surface Card */
-    .surface-card {
-        background: #101623;
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
-        margin-bottom: 20px;
-    }
-
-    /* Metric Card */
-    .metric-box {
-        background: #111827;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 12px;
-        padding: 14px 16px;
+        border-radius: 14px;
+        padding: 16px 18px;
         display: flex;
         flex-direction: column;
         justify-content: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .metric-title {
-        font-size: 0.72rem;
+    .telemetry-card:hover {
+        border-color: rgba(0, 255, 163, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0, 255, 163, 0.15);
+    }
+    .card-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.08em;
         color: #94A3B8;
         margin: 0 0 4px 0;
         font-weight: 600;
     }
-    .metric-value {
-        font-size: 1.35rem;
-        font-weight: 700;
+    .card-number {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 1.45rem;
+        font-weight: 800;
         color: #F8FAFC;
         margin: 0;
-        line-height: 1.2;
+        line-height: 1.15;
     }
 
-    /* Monospace Code Display */
-    .hash-code {
-        font-size: 0.78rem;
-        background: #090D16;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+    /* Cyber Hash & Telemetry Pill */
+    .cyber-hash-pill {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.76rem;
+        background: rgba(3, 6, 11, 0.95);
+        border: 1px solid rgba(0, 255, 163, 0.25);
         border-radius: 8px;
-        padding: 8px 12px;
-        color: #38BDF8;
+        padding: 9px 12px;
+        color: #00FFA3;
         word-break: break-all;
-        margin: 6px 0;
+        font-variant-numeric: tabular-nums;
         display: block;
+        margin: 6px 0;
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7);
+        text-shadow: 0 0 8px rgba(0, 255, 163, 0.3);
     }
 
-    /* Image frames */
-    img {
-        outline: 1px solid rgba(255, 255, 255, 0.12) !important;
-        outline-offset: -1px;
-        border-radius: 12px !important;
-    }
-
-    /* Badge chips */
-    .platform-badge {
+    /* Platform Badges with Glowing Accents */
+    .platform-pill {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        background: rgba(30, 41, 59, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 4px 10px;
+        gap: 7px;
+        padding: 5px 12px;
         border-radius: 8px;
         font-size: 0.78rem;
-        font-weight: 600;
-        color: #F1F5F9;
+        font-weight: 700;
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
-    .badge-success {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34D399;
-        border: 1px solid rgba(52, 211, 153, 0.3);
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 0.72rem;
-        font-weight: 600;
+    .platform-instagram {
+        background: linear-gradient(135deg, rgba(225, 48, 108, 0.2) 0%, rgba(253, 29, 29, 0.15) 100%);
+        color: #FF70A6;
+        border: 1px solid rgba(225, 48, 108, 0.4);
+        box-shadow: 0 0 12px rgba(225, 48, 108, 0.2);
+    }
+    .platform-x {
+        background: rgba(255, 255, 255, 0.1);
+        color: #FFFFFF;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.15);
+    }
+    .platform-linkedin {
+        background: rgba(10, 102, 194, 0.2);
+        color: #38BDF8;
+        border: 1px solid rgba(10, 102, 194, 0.4);
+        box-shadow: 0 0 12px rgba(10, 102, 194, 0.2);
+    }
+    .platform-generic {
+        background: rgba(0, 255, 163, 0.12);
+        color: #00FFA3;
+        border: 1px solid rgba(0, 255, 163, 0.35);
+        box-shadow: 0 0 12px rgba(0, 255, 163, 0.2);
     }
 
     /* Action Link Button */
-    .action-link-btn {
+    .cyber-action-btn {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        background: rgba(2, 132, 199, 0.15);
-        color: #38BDF8 !important;
-        border: 1px solid rgba(56, 189, 248, 0.35);
-        padding: 8px 14px;
-        border-radius: 8px;
-        font-size: 0.82rem;
-        font-weight: 600;
+        gap: 8px;
+        background: linear-gradient(135deg, rgba(0, 255, 163, 0.15) 0%, rgba(0, 210, 255, 0.15) 100%);
+        color: #00FFA3 !important;
+        border: 1px solid rgba(0, 255, 163, 0.4);
+        padding: 9px 16px;
+        border-radius: 9px;
+        font-size: 0.84rem;
+        font-weight: 700;
+        font-family: 'Plus Jakarta Sans', sans-serif;
         text-decoration: none;
-        transition-property: background-color, border-color, transform;
-        transition-duration: 150ms;
+        box-shadow: 0 0 14px rgba(0, 255, 163, 0.15);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .action-link-btn:hover {
-        background: rgba(2, 132, 199, 0.28);
-        border-color: rgba(56, 189, 248, 0.6);
+    .cyber-action-btn:hover {
+        background: linear-gradient(135deg, rgba(0, 255, 163, 0.28) 0%, rgba(0, 210, 255, 0.28) 100%);
+        border-color: rgba(0, 255, 163, 0.8);
         transform: translateY(-1px);
+        box-shadow: 0 0 24px rgba(0, 255, 163, 0.4);
     }
 
-    /* Button styles */
+    /* Electric Neon Primary Button */
     .stButton > button {
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        font-size: 0.9rem !important;
-        transition-property: transform, background-color, box-shadow;
-        transition-duration: 150ms;
-        transition-timing-function: ease-out;
+        background: linear-gradient(135deg, #00FFA3 0%, #00D2FF 60%, #0077FF 100%) !important;
+        color: #03060A !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 0.94rem !important;
+        letter-spacing: 0.04em !important;
+        text-transform: uppercase !important;
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 4px 20px rgba(0, 255, 163, 0.45) !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        padding: 12px 24px !important;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px) scale(1.01) !important;
+        box-shadow: 0 8px 32px rgba(0, 255, 163, 0.75) !important;
     }
     .stButton > button:active {
-        transform: scale(0.98);
+        transform: scale(0.97) !important;
     }
 
-    /* Hide redundant Streamlit chrome */
+    /* Tamper Strobe Alert Mode */
+    .tamper-strobe-alert {
+        background: rgba(255, 42, 85, 0.12);
+        border: 1px solid #FF2A55;
+        border-radius: 12px;
+        padding: 16px;
+        animation: tamperWarningStrobe 1.6s infinite ease-in-out;
+    }
+
+    /* Streamlit overrides */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# TOP NAVIGATION
+# TOP NAVIGATION: KANNADI CYBER-BIOMETRIC TERMINAL
 # -----------------------------------------------------------------------------
 st.markdown("""
-<div class="header-bar">
-    <div class="header-left">
-        <div class="header-logo">🛡️</div>
+<div class="kannadi-header">
+    <div class="kannadi-branding">
+        <div class="kannadi-prism-icon">🪞</div>
         <div>
-            <h1 class="header-title">VeriFace Console</h1>
-            <p class="header-subtitle">Decentralized Biometric Identity Discovery & EVM Attestation Engine</p>
+            <div class="kannadi-title-row">
+                <span class="kannadi-title">KANNADI</span>
+                <span class="kannadi-version-tag">VERIFACE // v2.6</span>
+            </div>
+            <p class="kannadi-subtitle">DECENTRALIZED BIOMETRIC MIRROR & EVM ATTESTATION PROTOCOL</p>
         </div>
     </div>
-    <div class="header-right">
-        <span class="network-pill">⚡ Py-EVM Engine</span>
-        <div class="live-pill">
-            <div class="pulse-dot"></div>
-            <span>Consensus Ready</span>
+    <div class="kannadi-telemetry">
+        <div class="telemetry-item">
+            <span class="telemetry-label">CONSENSUS</span>
+            <span class="telemetry-value neon-amber">⚡ LOCAL EVM (PY-EVM)</span>
+        </div>
+        <div class="telemetry-divider"></div>
+        <div class="telemetry-item">
+            <span class="telemetry-label">NETWORK STATE</span>
+            <span class="live-node-pill">
+                <span class="live-pulse-dot"></span>
+                SYNCHRONIZED
+            </span>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# SIDEBAR: SYSTEM PARAMETERS
+# SIDEBAR: SYSTEM & EXPLORER TELEMETRY
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("### Settings & Parameters")
+    st.markdown("### Protocol Gateway")
     network_choice = st.selectbox(
         "Consensus Network",
         ["local", "base-sepolia", "polygon-amoy"],
@@ -304,28 +467,28 @@ with st.sidebar:
         help="Local EVM: zero gas fees, instant in-memory settlement. Base Sepolia: broadcast to public testnet.",
     )
     search_mode = st.selectbox(
-        "Discovery Mode",
+        "Visual Discovery Engine",
         ["auto", "serper", "bing-wikidata"],
         index=0,
         help="'auto' detects Serper Google Lens, falling back to open search if needed.",
     )
     env_serper = os.getenv("SERPER_API_KEY", "")
     serper_key_input = st.text_input(
-        "Serper Visual Search Key",
+        "Serper Visual Key",
         value=env_serper,
         type="password",
-        help="Automatically loaded from .env. Powers visual search on Google Lens.",
+        help="Loaded automatically from .env. Powers Google Lens reverse image matching.",
     )
 
     st.markdown("---")
-    st.markdown("### Engine Verification")
+    st.markdown("### Telemetry Spec")
     st.markdown("""
-    - **Resolution**: 512×512 Normalized
-    - **Cryptography**: Keccak-256 (SHA3)
-    - **Canonicalization**: RFC 8785 (JCS)
-    - **Smart Contract**: Solidity 0.8.20
+    - **Resolution**: `512×512 Normalized`
+    - **Cryptography**: `Keccak-256 (SHA3)`
+    - **Standard**: `RFC 8785 Canonical JCS`
+    - **Registry**: `Solidity 0.8.20`
     """)
-    st.markdown("[View Source on GitHub](https://github.com/NEXUS-888/Kannadi.git)")
+    st.markdown("[View Repository on GitHub ↗](https://github.com/NEXUS-888/Kannadi.git)")
 
 # -----------------------------------------------------------------------------
 # SESSION STATE INITIALIZATION
@@ -343,8 +506,8 @@ if "last_receipt" not in st.session_state:
 
 # Navigation Tabs
 tab_pipeline, tab_verify, tab_contract = st.tabs([
-    "🚀 Attestation Pipeline",
-    "🔍 Re-Verification & Tamper Audit",
+    "⚡ Attestation Pipeline",
+    "🛡️ Zero-Trust Tamper Audit",
     "📜 Smart Contract Registry"
 ])
 
@@ -399,16 +562,16 @@ with tab_pipeline:
                 st.image(image_path, caption="Default Evaluation Sample (demo_face.jpg)", width=280)
 
     with col_action:
-        st.markdown("#### 2. Identity Binding & Execution")
+        st.markdown("#### 2. Identity Binding & Consensus Settlement")
         subject_hint_input = st.text_input(
             "Social Handle or Identity (Optional)",
             placeholder="e.g. @username, in/linkedin-user, or leave blank for visual search",
-            help="For private profiles not indexed on public search engines, providing your handle binds your social account directly to your face hash on-chain."
+            help="For private profiles not indexed by public search engines, providing your handle anchors your social accounts to your biometric face hash on the EVM."
         )
 
-        st.caption("Pressing Attest executes: face alignment (512×512) → social discovery → RFC 8785 hashing → EVM settlement.")
+        st.caption("Pressing Attest triggers: Haar landmark alignment (512×512) → social discovery → RFC 8785 canonical hash → EVM block settlement.")
 
-        run_btn = st.button("🛡️ Attest Biometric Identity On-Chain", type="primary", width="stretch")
+        run_btn = st.button("⚡ Attest Biometric Identity On-Chain", type="primary", width="stretch")
 
         if run_btn:
             if not image_path or not os.path.exists(image_path):
@@ -416,11 +579,11 @@ with tab_pipeline:
             else:
                 progress_container = st.container()
                 with progress_container:
-                    prog_bar = st.progress(0, text="Initializing biometric engine...")
+                    prog_bar = st.progress(0, text="Initializing Kannadi Biometric Engine...")
                     status_placeholder = st.empty()
 
                 try:
-                    prog_bar.progress(25, text="Step 1/4: Detecting landmarks & normalizing 512×512 face crop...")
+                    prog_bar.progress(25, text="Stage 1/4: Aligning facial landmarks & generating 512×512 normalized crop...")
                     pipeline = VeriFacePipeline(
                         network=network_choice,
                         search_provider=search_mode,
@@ -428,20 +591,20 @@ with tab_pipeline:
                         output_dir="output"
                     )
 
-                    prog_bar.progress(55, text="Step 2/4: Discovering social accounts across open web...")
+                    prog_bar.progress(55, text="Stage 2/4: Discovering social accounts across open web...")
                     time.sleep(0.2)
 
-                    prog_bar.progress(80, text="Step 3/4: Generating canonical RFC 8785 Keccak-256 hashes...")
+                    prog_bar.progress(80, text="Stage 3/4: Generating canonical RFC 8785 Keccak-256 commitments...")
                     time.sleep(0.2)
 
-                    prog_bar.progress(95, text="Step 4/4: Mining transaction on EVM smart contract...")
+                    prog_bar.progress(95, text="Stage 4/4: Mining transaction on EVM smart contract...")
                     receipt = pipeline.execute(
                         image_path,
                         subject_hint=subject_hint_input.strip() if subject_hint_input and subject_hint_input.strip() else None
                     )
 
-                    prog_bar.progress(100, text="Attestation finalized!")
-                    status_placeholder.success("✅ Identity successfully attested and anchored on EVM!")
+                    prog_bar.progress(100, text="Attestation Finalized!")
+                    status_placeholder.success("✅ Transaction Mined! Attestation permanently anchored on EVM.")
                     st.session_state.last_receipt = receipt
 
                 except Exception as e:
@@ -449,7 +612,7 @@ with tab_pipeline:
                     st.exception(e)
 
     # -------------------------------------------------------------------------
-    # RESULTS DASHBOARD
+    # RESULTS DASHBOARD: HIGH-SIGNAL TELEMETRY & SETTLEMENT
     # -------------------------------------------------------------------------
     if st.session_state.last_receipt:
         st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
@@ -467,88 +630,89 @@ with tab_pipeline:
             or "veriface.protocol" in post.get("post_url", "")
         )
 
-        # 4-Up Metric Stat Row
+        # 4-Up High-Contrast Telemetry Bar
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
         with col_m1:
             st.markdown(f"""
-            <div class="metric-box">
-                <span class="metric-title">Face Confidence</span>
-                <span class="metric-value">{rc['input_image']['confidence']*100:.1f}%</span>
+            <div class="telemetry-card">
+                <span class="card-label">BIO-CONFIDENCE</span>
+                <span class="card-number" style="color: #00FFA3;">{rc['input_image']['confidence']*100:.1f}%</span>
             </div>
             """, unsafe_allow_html=True)
         with col_m2:
             st.markdown(f"""
-            <div class="metric-box">
-                <span class="metric-title">Discovered Platforms</span>
-                <span class="metric-value">{total_platforms} Network{'s' if total_platforms > 1 else ''}</span>
+            <div class="telemetry-card">
+                <span class="card-label">SOCIAL GRAPH</span>
+                <span class="card-number" style="color: #00E5FF;">{total_platforms} Network{'s' if total_platforms > 1 else ''}</span>
             </div>
             """, unsafe_allow_html=True)
         with col_m3:
             st.markdown(f"""
-            <div class="metric-box">
-                <span class="metric-title">EVM Consensus</span>
-                <span class="metric-value">Block #{bc['block_number']}</span>
+            <div class="telemetry-card">
+                <span class="card-label">EVM CONSENSUS</span>
+                <span class="card-number" style="color: #FFB800;">Block #{bc['block_number']}</span>
             </div>
             """, unsafe_allow_html=True)
         with col_m4:
             st.markdown(f"""
-            <div class="metric-box">
-                <span class="metric-title">Attestation Status</span>
-                <span class="metric-value" style="color: #34D399;">VERIFIED</span>
+            <div class="telemetry-card" style="border-color: rgba(0, 255, 163, 0.45); box-shadow: 0 0 20px rgba(0, 255, 163, 0.2);">
+                <span class="card-label">CONSENSUS STATE</span>
+                <span class="card-number" style="color: #00FFA3; text-shadow: 0 0 12px rgba(0, 255, 163, 0.6);">VERIFIED ✓</span>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
-        # 3 Clean Columns: Biometrics | Social Discovery | EVM Proof
+        # 3 High-Impact Scannable Columns
         col_c1, col_c2, col_c3 = st.columns([1, 1.25, 1.15], gap="medium")
 
-        # Column 1: Biometric Verification
+        # Column 1: Biometric Matrix
         with col_c1:
             st.markdown("#### 1. Biometric Proof")
             crop_file = rc["input_image"].get("crop_path")
             if crop_file and os.path.exists(crop_file):
                 st.image(crop_file, width=260)
 
-            st.caption("Keccak-256 Face Hash (Normalized 512×512)")
-            st.markdown(f'<span class="hash-code">{rc["cryptography"]["face_hash"]}</span>', unsafe_allow_html=True)
-            st.caption("🔒 Zero biometric pixels stored on chain. GDPR & CCPA compliant.")
+            st.caption("Keccak-256 Face Fingerprint (Normalized 512×512)")
+            st.markdown(f'<span class="cyber-hash-pill">{rc["cryptography"]["face_hash"]}</span>', unsafe_allow_html=True)
+            st.caption("🔒 Zero biometric pixels stored on-chain. GDPR Article 9 & CCPA compliant.")
 
         # Column 2: Social Identity Graph
         with col_c2:
-            st.markdown("#### 2. Social Identity Graph")
+            st.markdown("#### 2. Discovered Identity Graph")
 
             if entity_name:
                 st.markdown(f"""
-                <div style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 1.1rem; font-weight: 700; color: #F8FAFC;">{entity_name}</span>
-                    <span class="badge-success">Verified Identity</span>
+                <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC; letter-spacing: -0.02em;">👤 {entity_name}</span>
+                    <span class="platform-pill platform-generic">VERIFIED ENTITY</span>
                 </div>
                 """, unsafe_allow_html=True)
 
             if is_unindexed:
                 st.markdown(f"""
-                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span class="platform-badge">🔒 Private Biometric Anchor</span>
-                        <span class="badge-success">On-Chain</span>
+                <div style="background: rgba(0, 255, 163, 0.06); border: 1px solid rgba(0, 255, 163, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span class="platform-pill platform-generic">🔒 Private Biometric Anchor</span>
+                        <span class="live-node-pill" style="font-size: 0.68rem; padding: 3px 8px;">ON-CHAIN</span>
                     </div>
-                    <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC;">{post['author_handle']}</div>
-                    <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 4px;">
-                        Face normalized and signed. Subject profile is private or not indexed by public search spiders.
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #F8FAFC;">{post['author_handle']}</div>
+                    <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 6px; line-height: 1.4;">
+                        Face normalized and cryptographically signed. Subject identity is unindexed on public search engines.
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
+                platform_class = "platform-instagram" if "Instagram" in post['platform'] else ("platform-x" if "X" in post['platform'] or "Twitter" in post['platform'] else "platform-linkedin")
                 st.markdown(f"""
-                <div style="background: rgba(17, 24, 39, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span class="platform-badge">🌐 {post['platform']}</span>
-                        <span class="badge-success">Match Conf: {int(post.get('confidence_score', 0.95)*100)}%</span>
+                <div style="background: rgba(12, 18, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span class="platform-pill {platform_class}">🌐 {post['platform']}</span>
+                        <span class="live-node-pill" style="font-size: 0.68rem; padding: 3px 8px;">CONF: {int(post.get('confidence_score', 0.95)*100)}%</span>
                     </div>
-                    <div style="font-size: 1.05rem; font-weight: 700; color: #F8FAFC;">{post['author_handle']}</div>
-                    <div style="font-size: 0.84rem; color: #CBD5E1; margin: 4px 0 12px 0;">{post['post_title']}</div>
-                    <a href="{post['post_url']}" target="_blank" class="action-link-btn">
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC;">{post['author_handle']}</div>
+                    <div style="font-size: 0.84rem; color: #CBD5E1; margin: 4px 0 14px 0; font-weight: 500;">{post['post_title']}</div>
+                    <a href="{post['post_url']}" target="_blank" class="cyber-action-btn">
                         Open Verified Profile ↗
                     </a>
                 </div>
@@ -557,48 +721,48 @@ with tab_pipeline:
             # Additional linked platforms
             all_m = summary.get("all_matches", [])
             if len(all_m) > 1 and not is_unindexed:
-                st.caption("Other Linked Accounts")
+                st.caption("Other Discovered Profiles")
                 for m in all_m[1:4]:
                     st.markdown(f"""
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(30, 41, 59, 0.4); border-radius: 8px; margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.04);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 12px; background: rgba(3, 7, 13, 0.7); border-radius: 8px; margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.06);">
                         <span style="font-size: 0.82rem; color: #E2E8F0;"><strong>{m['platform']}</strong>: {m['author_handle']}</span>
-                        <a href="{m['post_url']}" target="_blank" style="color: #38BDF8; font-size: 0.78rem; text-decoration: none; font-weight: 600;">Visit ↗</a>
+                        <a href="{m['post_url']}" target="_blank" style="color: #00FFA3; font-size: 0.78rem; text-decoration: none; font-weight: 700;">Visit ↗</a>
                     </div>
                     """, unsafe_allow_html=True)
 
             st.caption("Canonical Metadata Hash (RFC 8785)")
-            st.markdown(f'<span class="hash-code">{rc["cryptography"]["metadata_hash"]}</span>', unsafe_allow_html=True)
+            st.markdown(f'<span class="cyber-hash-pill">{rc["cryptography"]["metadata_hash"]}</span>', unsafe_allow_html=True)
 
         # Column 3: EVM On-Chain Settlement
         with col_c3:
-            st.markdown("#### 3. EVM On-Chain Record")
+            st.markdown("#### 3. EVM Settlement Ledger")
             st.markdown(f"""
-            <div style="background: rgba(17, 24, 39, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
-                <div style="margin-bottom: 6px; font-size: 0.82rem;">
-                    <span style="color: #94A3B8;">Network:</span>
-                    <strong style="color: #F8FAFC;">{bc['network'].upper()}</strong>
+            <div style="background: rgba(12, 18, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+                <div style="margin-bottom: 8px; font-size: 0.82rem; display: flex; justify-content: space-between;">
+                    <span style="color: #94A3B8;">Consensus:</span>
+                    <strong style="color: #00FFA3;">{bc['network'].upper()} (EVM)</strong>
                 </div>
-                <div style="margin-bottom: 6px; font-size: 0.82rem;">
+                <div style="margin-bottom: 8px; font-size: 0.82rem; display: flex; justify-content: space-between;">
                     <span style="color: #94A3B8;">Contract:</span>
-                    <code style="color: #38BDF8;">{bc['contract_address'][:10]}...{bc['contract_address'][-6:]}</code>
+                    <code style="color: #00E5FF;">{bc['contract_address'][:10]}...{bc['contract_address'][-6:]}</code>
                 </div>
-                <div style="margin-bottom: 6px; font-size: 0.82rem;">
+                <div style="margin-bottom: 8px; font-size: 0.82rem; display: flex; justify-content: space-between;">
                     <span style="color: #94A3B8;">Tx Hash:</span>
                     <code style="color: #E2E8F0;">{bc['tx_hash'][:10]}...{bc['tx_hash'][-6:]}</code>
                 </div>
-                <div style="margin-bottom: 6px; font-size: 0.82rem;">
+                <div style="margin-bottom: 8px; font-size: 0.82rem; display: flex; justify-content: space-between;">
                     <span style="color: #94A3B8;">Gas Consumed:</span>
-                    <code class="tabular-num">{bc['gas_used']:,} wei</code>
+                    <code class="tabular-num" style="color: #FFB800;">{bc['gas_used']:,} wei</code>
                 </div>
-                <div style="font-size: 0.82rem;">
+                <div style="font-size: 0.82rem; display: flex; justify-content: space-between;">
                     <span style="color: #94A3B8;">Signer:</span>
                     <code style="color: #E2E8F0;">{bc['attestor'][:10]}...{bc['attestor'][-6:]}</code>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            st.caption("Attestation ID (bytes32)")
-            st.markdown(f'<span class="hash-code">{rc["cryptography"]["attestation_id"]}</span>', unsafe_allow_html=True)
+            st.caption("Cryptographic Attestation ID (bytes32)")
+            st.markdown(f'<span class="cyber-hash-pill">{rc["cryptography"]["attestation_id"]}</span>', unsafe_allow_html=True)
 
             st.download_button(
                 "⬇ Download Cryptographic Receipt (JSON)",
@@ -610,14 +774,14 @@ with tab_pipeline:
 
 
 # =============================================================================
-# TAB 2: RE-VERIFICATION & TAMPER AUDIT
+# TAB 2: RE-VERIFICATION & ZERO-TRUST TAMPER AUDIT
 # =============================================================================
 with tab_verify:
-    st.markdown("#### Independent Re-Verification & Tamper-Evidence Audit")
-    st.caption("Re-evaluates the biometric image and social metadata against the immutable EVM smart contract to verify zero-trust authenticity.")
+    st.markdown("#### Zero-Trust Independent Re-Verification & Tamper Audit")
+    st.caption("Recomputes Keccak-256 hashes directly from source bytes and verifies mathematical parity against the immutable on-chain smart contract.")
 
     if not st.session_state.last_receipt:
-        st.info("Execute an attestation in Tab 1 first to generate a cryptographic receipt.")
+        st.info("Execute an attestation in Tab 1 first to generate an active cryptographic receipt.")
     else:
         rc = st.session_state.last_receipt
         col_ctrl, col_result = st.columns([1, 1.4], gap="medium")
@@ -632,27 +796,27 @@ with tab_verify:
 
             if tamper_mode:
                 st.markdown("""
-                <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 12px; margin: 12px 0;">
-                    <strong style="color: #F87171;">⚠️ Tamper Simulation Mode</strong>
+                <div class="tamper-strobe-alert" style="margin: 12px 0;">
+                    <strong style="color: #FF2A55; font-size: 0.9rem;">⚠️ ADVERSARIAL TAMPER MODE ACTIVE</strong>
                     <div style="font-size: 0.8rem; color: #FECACA; margin-top: 4px;">
-                        Injected mutation into face hash and metadata string.
+                        Injected 1-byte mutation into biometric face vector and canonical metadata string.
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 12px; margin: 12px 0;">
-                    <strong style="color: #34D399;">✓ Authentic Audit Mode</strong>
+                <div style="background: rgba(0, 255, 163, 0.08); border: 1px solid rgba(0, 255, 163, 0.35); border-radius: 12px; padding: 14px; margin: 12px 0; box-shadow: 0 0 16px rgba(0, 255, 163, 0.1);">
+                    <strong style="color: #00FFA3; font-size: 0.9rem;">✓ ZERO-TRUST AUTHENTIC AUDIT</strong>
                     <div style="font-size: 0.8rem; color: #A7F3D0; margin-top: 4px;">
-                        Verifying unmodified face crop and metadata against on-chain contract.
+                        Verifying unaltered biometric crop and canonical metadata against EVM ledger.
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-            run_audit = st.button("🔎 Run Re-Verification Audit", type="primary", width="stretch")
+            run_audit = st.button("🔎 Execute On-Chain Verification Audit", type="primary", width="stretch")
 
         with col_result:
-            st.markdown("##### Cryptographic Audit Output")
+            st.markdown("##### Cryptographic Audit Telemetry")
             if run_audit:
                 target_crop = rc["input_image"].get("crop_path")
                 with open(target_crop, "rb") as f:
@@ -687,31 +851,31 @@ with tab_verify:
 
                 if face_ok and meta_ok and onchain_ok:
                     st.markdown(f"""
-                    <div style="background: rgba(6, 78, 59, 0.7); border: 1px solid #10B981; border-radius: 12px; padding: 18px; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);">
-                        <h4 style="color: #ECFDF5; margin: 0 0 6px 0;">✅ AUDIT PASSED: 100% CRYPTOGRAPHIC MATCH</h4>
-                        <div style="color: #D1FAE5; font-size: 0.85rem; margin-bottom: 12px;">Biometric image and social graph match on-chain record perfectly.</div>
-                        <div style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 10px; font-size: 0.8rem; color: #ECFDF5;">
-                            <div>• Face Biometric Hash: <strong>MATCH [VALID]</strong></div>
-                            <div>• Metadata Hash: <strong>MATCH [VALID]</strong></div>
-                            <div>• EVM Smart Contract: <strong>CONFIRMED VALID</strong></div>
+                    <div style="background: linear-gradient(135deg, rgba(0, 50, 30, 0.85) 0%, rgba(3, 30, 20, 0.95) 100%); border: 1px solid #00FFA3; border-radius: 14px; padding: 20px; box-shadow: 0 0 30px rgba(0, 255, 163, 0.25);">
+                        <h4 style="color: #00FFA3; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 800;">✅ AUDIT PASSED: 100% CRYPTOGRAPHIC INTEGRITY</h4>
+                        <div style="color: #D1FAE5; font-size: 0.85rem; margin-bottom: 14px;">The source face scan and discovered social metadata match the on-chain consensus state bit-for-bit.</div>
+                        <div style="background: rgba(0, 0, 0, 0.4); border-radius: 10px; padding: 12px; font-size: 0.82rem; color: #ECFDF5; border: 1px solid rgba(0, 255, 163, 0.2);">
+                            <div style="margin-bottom: 4px;">• Face Biometric Hash: <strong style="color: #00FFA3;">MATCH [VALID]</strong></div>
+                            <div style="margin-bottom: 4px;">• Canonical Metadata Hash: <strong style="color: #00FFA3;">MATCH [VALID]</strong></div>
+                            <div style="margin-bottom: 4px;">• Smart Contract Verification: <strong style="color: #00FFA3;">CONFIRMED ON-CHAIN</strong></div>
                             <div>• Attestor Signer: <code>{audit_res.get('attestor')}</code></div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown(f"""
-                    <div style="background: rgba(127, 29, 29, 0.7); border: 1px solid #EF4444; border-radius: 12px; padding: 18px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);">
-                        <h4 style="color: #FEF2F2; margin: 0 0 6px 0;">🚨 AUDIT FAILED: TAMPER DETECTED</h4>
-                        <div style="color: #FEE2E2; font-size: 0.85rem; margin-bottom: 12px;">Cryptographic commitment divergence detected! On-chain record rejected.</div>
-                        <div style="background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 10px; font-size: 0.8rem; color: #FEF2F2;">
-                            <div>• Face Biometric Hash: <strong>{'MATCH' if face_ok else 'TAMPERED [MISMATCH]'}</strong></div>
-                            <div>• Metadata Hash: <strong>{'MATCH' if meta_ok else 'TAMPERED [MISMATCH]'}</strong></div>
-                            <div>• EVM Smart Contract: <strong>HASH MISMATCH (REJECTED)</strong></div>
+                    <div style="background: linear-gradient(135deg, rgba(60, 10, 20, 0.85) 0%, rgba(30, 5, 10, 0.95) 100%); border: 1px solid #FF2A55; border-radius: 14px; padding: 20px; box-shadow: 0 0 30px rgba(255, 42, 85, 0.35);">
+                        <h4 style="color: #FF2A55; margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 800;">🚨 AUDIT FAILED: CRYPTOGRAPHIC TAMPER DETECTED</h4>
+                        <div style="color: #FEE2E2; font-size: 0.85rem; margin-bottom: 14px;">Cryptographic commitment divergence detected! Transaction hash rejected by consensus.</div>
+                        <div style="background: rgba(0, 0, 0, 0.4); border-radius: 10px; padding: 12px; font-size: 0.82rem; color: #FEF2F2; border: 1px solid rgba(255, 42, 85, 0.25);">
+                            <div style="margin-bottom: 4px;">• Face Biometric Hash: <strong style="color: {'#00FFA3' if face_ok else '#FF2A55'};">{'MATCH' if face_ok else 'MUTATED [HASH MISMATCH]'}</strong></div>
+                            <div style="margin-bottom: 4px;">• Canonical Metadata Hash: <strong style="color: {'#00FFA3' if meta_ok else '#FF2A55'};">{'MATCH' if meta_ok else 'MUTATED [HASH MISMATCH]'}</strong></div>
+                            <div>• EVM Smart Contract State: <strong style="color: #FF2A55;">HASH MISMATCH (TRANSACTION REJECTED)</strong></div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.caption("Click 'Run Re-Verification Audit' to trigger the on-chain comparison.")
+                st.caption("Click 'Execute On-Chain Verification Audit' to test the tamper-evidence cryptographic verification.")
 
 
 # =============================================================================
@@ -741,4 +905,5 @@ with tab_contract:
             with open(contract_path, "r", encoding="utf-8") as f:
                 sol_src = f.read()
             st.code(sol_src, language="solidity", line_numbers=True)
+
 
