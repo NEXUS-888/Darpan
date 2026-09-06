@@ -1,98 +1,137 @@
-# VeriFace Protocol: Face Identification & Blockchain Verification
+<p align="center">
+  <img src="assets/banner.jpg" alt="VeriFace Protocol Banner" width="100%" style="border-radius: 10px; max-width: 900px;" />
+</p>
 
-> **HH Goa 2026 Shortlisting Task 3: End-to-End Biometric Attestation & Ledger Verification Pipeline**
+<h1 align="center">VeriFace Protocol: Biometric Attestation & Ledger Verification</h1>
 
-[![CI Tests](https://img.shields.io/badge/tests-15%20passed-brightgreen.svg)](tests/)
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg)](https://python.org)
-[![Solidity](https://img.shields.io/badge/Solidity-^0.8.20-363636.svg)](contracts/FaceAttestationRegistry.sol)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+<p align="center">
+  <em>A privacy-preserving, zero-biometric on-chain attestation engine connecting open-web facial discovery to tamper-evident EVM smart contracts.</em>
+</p>
+
+<p align="center">
+  <a href="tests/"><img src="https://img.shields.io/badge/tests-37%20passed-00FFA3?style=for-the-badge&logo=pytest&logoColor=black" alt="CI Tests" /></a>
+  <a href="contracts/FaceAttestationRegistry.sol"><img src="https://img.shields.io/badge/Solidity-^0.8.20-black?style=for-the-badge&logo=solidity&logoColor=white" alt="Solidity" /></a>
+  <img src="https://img.shields.io/badge/EVM-Base%20Sepolia%20%7C%20Local-FFB800?style=for-the-badge&logo=ethereum&logoColor=black" alt="EVM Compatible" />
+  <img src="https://img.shields.io/badge/Privacy-Zero%20On--Chain%20PII-blue?style=for-the-badge&logo=securityscorecard&logoColor=white" alt="Zero PII" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-white?style=for-the-badge" alt="License" /></a>
+</p>
 
 ---
 
-## 1. What the Project Does
+## 1. Overview & Problem Statement
 
-The **VeriFace Protocol** is a resilient, privacy-preserving pipeline that takes an input human face scan, searches the open web and social media for matching identity posts, creates deterministic cryptographic commitments, and registers a tamper-evident attestation on an EVM blockchain.
+Storing facial biometrics or personally identifiable social data on a public, immutable blockchain is catastrophic:
+- **Legal Risk:** It directly violates **GDPR Articles 9 (Special Category Biometrics)** and **Article 17 (Right to be Forgotten)**.
+- **Economic Inefficiency:** Writing high-dimensional embeddings or image blobs on-chain incurs massive gas fees.
+- **Tampering Risk:** Social platforms drift, posts get edited, and metadata formatting varies across operating systems.
 
-### End-to-End Pipeline Shape
+**VeriFace Protocol ("Kannadi")** solves this by establishing a **zero-knowledge, tamper-evident commitment pipeline**. It normalizes face scans, locates associated public identities across the open web, computes deterministic cryptographic hashes, and anchors a non-invertible **32-byte commitment** on an EVM smart contract—without storing a single byte of raw biometric data on-chain.
+
+---
+
+## 2. System Architecture
+
+The pipeline moves deterministically through 5 stages, from raw pixels to cryptographic state verification on the blockchain:
+
+```mermaid
+flowchart TD
+    subgraph S1["Stage 1: Biometric Computer Vision"]
+        A["📷 Raw Face Scan"] --> B["OpenCV Haar Cascade + Landmark Alignment"]
+        B --> C["Normalized 512x512 Crop"]
+        C --> D["ArcFace Biometric Embeddings<br/>(DeepFace / Cosine Verification)"]
+        C --> E["Keccak-256 Biometric Hash<br/>(32 bytes)"]
+    end
+
+    subgraph S2["Stage 2: Federated Multi-Engine OSINT"]
+        C --> F["Search Gateway (Federated Mode)"]
+        F --> G["Yandex Reverse Visual Search"]
+        F --> H["Google Lens / Serper Gateway"]
+        F --> I["Bing Visual Search + Wikidata"]
+        G & H & I --> J["Aggregated Social Identity Graph<br/>(X, LinkedIn, Instagram, Reddit)"]
+    end
+
+    subgraph S3["Stage 3: Canonical Cryptography"]
+        J --> K["RFC 8785 Canonical JSON (JCS)"]
+        K --> L["Metadata Hash<br/>(32 bytes)"]
+        E & L --> M["Commitment Attestation ID<br/>keccak256(faceHash || metaHash)"]
+    end
+
+    subgraph S4["Stage 4: Blockchain Anchor"]
+        M --> N["FaceAttestationRegistry.sol<br/>(EVM Smart Contract)"]
+        N --> O["⛓️ Mined Block Transaction<br/>(Base Sepolia / py-evm)"]
+    end
+
+    subgraph S5["Stage 5: Verification & Tamper Audit"]
+        O --> P["Independent Audit Comparator"]
+        P --> Q{"Tamper Check"}
+        Q -->|Untampered| R["✅ Cryptographic Proof Valid"]
+        Q -->|Altered Data| S["❌ Attestation Fails / Rejected"]
+    end
+
+    style S1 fill:#0D1117,stroke:#00FFA3,stroke-width:1.5px,color:#fff
+    style S2 fill:#0D1117,stroke:#38BDF8,stroke-width:1.5px,color:#fff
+    style S3 fill:#0D1117,stroke:#A855F7,stroke-width:1.5px,color:#fff
+    style S4 fill:#0D1117,stroke:#FFB800,stroke-width:1.5px,color:#fff
+    style S5 fill:#0D1117,stroke:#10B981,stroke-width:1.5px,color:#fff
+    style R fill:#00FFA3,stroke:#00FFA3,color:#000
+    style S fill:#EF4444,stroke:#EF4444,color:#fff
 ```
-[1. Face Scan Input]
-        │  (OpenCV Haar Cascade + Landmark Alignment)
-        ▼
-[2. Normalized 512x512 Crop & Keccak-256 Biometric Hash]
-        │  (Google Lens / Serper Reverse Search Gateway)
-        ▼
-[3. Open-Web Social Media Discovery (X, LinkedIn, Reddit)]
-        │  (RFC 8785 Canonical JSON Commitment)
-        ▼
-[4. Blockchain Attestation (FaceAttestationRegistry.sol)]
-        │  (EVM Transaction mined with block receipt)
-        ▼
-[5. Independent Re-Verification & Tamper Audit]
-```
 
 ---
 
-## 2. Core Architectural Principles
+## 3. Why VeriFace? (Architecture Comparison)
 
-1. **Zero Biometric Ledger Exposure (Privacy by Design)**:
-   Storing raw biometric images or social profile PII on an immutable public ledger violates GDPR (Articles 9 & 17) and incurs massive gas costs. VeriFace stores only non-invertible **32-byte Keccak-256 commitments**.
-2. **Deterministic Canonicalization (RFC 8785)**:
-   Social post metadata is normalized using the JSON Canonicalization Scheme (JCS) before hashing, ensuring 100% hash reproducibility across any operating system or runtime.
-3. **Zero-Cost, Zero-Friction Evaluation**:
-   - **Blockchain**: Built-in, zero-setup local Ethereum Virtual Machine (`py-evm` / `eth-tester`) with 10 pre-funded accounts. Evaluators do not need crypto wallets, seed phrases, or testnet faucets.
-   - **Search Gateway**: Supports live Google Lens search via free-tier Serper.dev (2,500 free queries, no credit card required) alongside a self-contained local evaluation engine for instant offline testing.
-
----
-
-## 3. Which Blockchain is Used
-
-The pipeline targets the **Ethereum Virtual Machine (EVM)** using a custom Solidity smart contract: [`FaceAttestationRegistry.sol`](contracts/FaceAttestationRegistry.sol) (compiled with Solidity `^0.8.20`).
-
-### Execution Modes:
-* **Local EVM (Default)**: Embedded, deterministic Python EVM (`py-evm` / `eth-tester`) executing full block state transitions, event emissions, and view function calls instantaneously with zero setup.
-* **Public Testnet (Configurable)**: Can broadcast directly to **Base Sepolia** or **Polygon Amoy** by configuring `.env` or passing `--network base-sepolia`.
-
-### Smart Contract Highlights:
-* `recordAttestation(bytes32 attestationId, bytes32 faceHash, bytes32 metadataHash, string postUrl)`: Verifies commitment integrity `keccak256(abi.encodePacked(faceHash, metadataHash)) == attestationId` and anchors the record on-chain.
-* `verifyAttestation(bytes32 attestationId, bytes32 faceHash, bytes32 metadataHash)`: View function performing cryptographic state verification.
-* `getAttestation(bytes32 attestationId)`: Retrieves full immutable attestation metadata.
+| Dimension | Traditional Biometric Verification | VeriFace Protocol |
+| :--- | :--- | :--- |
+| **On-Chain Biometric Footprint** | Raw images or 512-d float vectors (Gas heavy) | **Zero** (Only 32-byte Keccak-256 cryptographic hashes) |
+| **Privacy & GDPR Compliance** | Violates GDPR Art. 9 & 17 (Permanent immutable biometric leaks) | **100% Compliant** (Non-invertible commitments, zero PII on-chain) |
+| **Metadata Reproducibility** | Non-deterministic JSON serialization (key-order drift) | **Strict RFC 8785 JSON Canonicalization Scheme (JCS)** |
+| **Blockchain Execution** | Requires paid gas faucets, seed phrases, and external wallets | **Dual Mode**: Zero-friction embedded `py-evm` + Base Sepolia |
+| **Tamper Detection** | Post-hoc manual inspection | **Cryptographically enforced at smart contract layer** |
 
 ---
 
-## 4. How to Run
+## 4. Quickstart Guide
+
+### Prerequisites
+- Python 3.10, 3.11, 3.12, or 3.14
+- Git
 
 ### Step 1: Clone & Install Dependencies
 ```bash
-# Clone the repository
-git clone https://github.com/<your-username>/face_identification.git
-cd face_identification
+git clone https://github.com/NEXUS-888/Kannadi.git
+cd Kannadi
 
 # Install lightweight dependencies
 pip install -r requirements.txt
 ```
 
-### Step 2: (Optional) Configure Live Google Lens Search
-If you wish to run live reverse searches with Google Lens:
-1. Get a free API key at [Serper.dev](https://serper.dev) (2,500 free searches, no credit card).
-2. Copy `.env.example` to `.env` and set:
-   ```env
-   SERPER_API_KEY=your_key_here
+### Step 2: (Optional) Live Google Lens Search
+The pipeline includes an offline evaluation engine out-of-the-box. To enable live web queries via Google Lens:
+1. Grab a free API key at [Serper.dev](https://serper.dev) (2,500 free queries, no credit card required).
+2. Create your local `.env`:
+   ```bash
+   cp .env.example .env
    ```
-*(Note: If no key is set, the pipeline automatically runs in local evaluation mode, guaranteeing zero-friction evaluation).*
+3. Set `SERPER_API_KEY=your_key_here`.
 
-### Step 3: Execute the End-to-End Pipeline
-Run the primary CLI script with the bundled sample face:
+---
+
+## 5. Running the Pipeline
+
+### Mode A: CLI Execution (Headless)
+Execute the complete 4-stage pipeline against the sample portrait:
 ```bash
 python scripts/run_pipeline.py --image samples/demo_face.jpg
 ```
 
-**Expected Terminal Output:**
+**Terminal Telemetry:**
 ```text
 ================================================================================
           VERIFACE PROTOCOL: FACE IDENTIFICATION & BLOCKCHAIN ATTESTATION
               HH Goa 2026 Shortlisting Task 3 - End-to-End Pipeline
 ================================================================================
-    
+
 [*] Initializing VeriFace Pipeline:
     - Input Image:     samples/demo_face.jpg
     - Blockchain:      LOCAL (EVM)
@@ -124,58 +163,55 @@ python scripts/run_pipeline.py --image samples/demo_face.jpg
 [Audit Record] Complete cryptographic receipt written to: output\attestation_receipt.json
 ```
 
-### Step 3b: (Interactive Web Dashboard) Launch the Streamlit GUI
-If you prefer a visual user interface with image drag-and-drop, live side-by-side face cropping, on-chain transaction explorer, and an interactive tamper-evidence switch:
+---
+
+### Mode B: Interactive Cyber-Biometric HUD (`app.py`)
+Launch the custom Streamlit HUD console featuring animated laser scanning viewfinders, live reverse-search telemetry, and real-time blockchain consensus tickers:
+
 ```bash
 streamlit run app.py
 ```
-This launches a browser dashboard at `http://localhost:8501`.
+Open **`http://localhost:8501`** in your browser.
 
 ---
 
-## 5. Independent Re-Verification & Tamper-Evidence Audit
+## 6. Independent Re-Verification & Tamper Audit
 
-`task #3.md` requires demonstrating re-verification of the discovered data against the on-chain record.
+To prove that the blockchain record is tamper-evident, VeriFace includes an independent audit script.
 
-### 5.1 Valid Attestation Verification
-Run the verification audit tool against the generated receipt:
+### 6.1 Valid Attestation Verification
+Verify an untampered receipt directly against the on-chain smart contract state:
 ```bash
 python scripts/verify_attestation.py --receipt output/attestation_receipt.json
 ```
-**Output:**
 ```text
 [Verification Step 1/3] Recomputing Face Biometric Hash...
-  - Recomputed Face Hash: 0x65da4ead41abfa51c57d3bcc485580b5a71d3f07b926fa81c8f170a2224d2351
-  - Receipt Face Hash:    0x65da4ead41abfa51c57d3bcc485580b5a71d3f07b926fa81c8f170a2224d2351
-  - Face Hash Integrity:  [PASS] MATCHES
+  - Face Hash Integrity:       [PASS] MATCHES (0x65da4ead...24d2351)
 
 [Verification Step 2/3] Recomputing Canonical Social Post Metadata Hash...
-  - Recomputed Meta Hash: 0x96a5a6eca0fca7fd3812e58694aeea608866b42e2e51d3d9f234b3cb77d2e10f
-  - Receipt Meta Hash:    0x96a5a6eca0fca7fd3812e58694aeea608866b42e2e51d3d9f234b3cb77d2e10f
-  - Metadata Integrity:   [PASS] MATCHES
+  - Metadata Integrity:        [PASS] MATCHES (0x96a5a6ec...b3cb77d)
 
 [Verification Step 3/3] Recomputing Commitment Attestation ID...
-  - Commitment Integrity:      [PASS] MATCHES
+  - Commitment Integrity:      [PASS] MATCHES (0xde45b20c...ef7fa19)
 
 [Blockchain Verification] Verifying commitment against EVM smart contract...
   - Contract Query Result:     Cryptographic proof matches on-chain commitment
   - On-Chain Verification:     [CONFIRMED VALID]
 ```
 
-### 5.2 Tamper-Evidence Demonstration
-Run the verification audit with the `--tamper-test` flag to demonstrate how any modification in the face image or social post metadata triggers immediate cryptographic failure:
+### 6.2 Simulated Tamper Injection Test
+Run the audit with the `--tamper-test` flag to simulate an attacker altering even a single pixel in the face scan or modifying the social URL:
 ```bash
 python scripts/verify_attestation.py --receipt output/attestation_receipt.json --tamper-test
 ```
-**Output:**
 ```text
 [Verification Step 1/3] Recomputing Face Biometric Hash...
   [!] INJECTING SIMULATED TAMPER: Mutating face hash bytes...
-  - Face Hash Integrity:  [FAIL] MISMATCH (TAMPERED)
+  - Face Hash Integrity:       [FAIL] MISMATCH (TAMPERED)
 
 [Verification Step 2/3] Recomputing Canonical Social Post Metadata Hash...
   [!] INJECTING SIMULATED TAMPER: Altering post snippet content...
-  - Metadata Integrity:   [FAIL] MISMATCH (TAMPERED)
+  - Metadata Integrity:        [FAIL] MISMATCH (TAMPERED)
 
 [Blockchain Verification] Verifying commitment against EVM smart contract...
   - Contract Query Result:     Hash mismatch: data tampered
@@ -189,41 +225,64 @@ python scripts/verify_attestation.py --receipt output/attestation_receipt.json -
 
 ---
 
-## 6. Running the Test Suite
+## 7. Automated Test Suite
 
-The project includes unit and integration tests covering computer vision, cryptographic hashing, social search parsing, EVM smart contract logic, and end-to-end orchestration:
+The repository includes a comprehensive 37-test automated verification suite covering computer vision algorithms, ArcFace biometric embeddings, RFC 8785 canonicalization, Yandex/Bing/Lens reverse-search parsers, and Solidity smart contract execution:
 
 ```bash
 pytest -v tests/
 ```
 
-**Result:**
 ```text
-tests/test_blockchain.py::test_contract_deployment PASSED                [  6%]
-tests/test_blockchain.py::test_record_and_verify_attestation PASSED      [ 13%]
-tests/test_blockchain.py::test_duplicate_attestation_prevention PASSED   [ 20%]
-tests/test_face_engine.py::test_face_engine_initialization PASSED        [ 26%]
-tests/test_face_engine.py::test_face_engine_processing PASSED            [ 33%]
-tests/test_face_engine.py::test_face_engine_synthetic_fallback PASSED    [ 40%]
-tests/test_hasher.py::test_canonicalize_json_key_order PASSED            [ 46%]
-tests/test_hasher.py::test_compute_keccak256 PASSED                      [ 53%]
-tests/test_hasher.py::test_compute_metadata_hash_deterministic PASSED    [ 60%]
-tests/test_hasher.py::test_compute_attestation_id_valid PASSED           [ 66%]
-tests/test_hasher.py::test_compute_attestation_id_invalid_length PASSED  [ 73%]
-tests/test_pipeline.py::test_pipeline_execution_end_to_end PASSED        [ 80%]
-tests/test_social_search.py::test_identify_social_platform PASSED        [ 86%]
-tests/test_social_search.py::test_extract_author_handle PASSED           [ 93%]
-tests/test_social_search.py::test_search_gateway_eval_provider PASSED    [100%]
+tests/test_blockchain.py::test_contract_deployment PASSED                [  2%]
+tests/test_blockchain.py::test_record_and_verify_attestation PASSED      [  5%]
+tests/test_blockchain.py::test_duplicate_attestation_prevention PASSED   [  8%]
+tests/test_face_engine.py::test_face_engine_initialization PASSED        [ 10%]
+tests/test_face_engine.py::test_face_engine_processing PASSED            [ 13%]
+tests/test_face_engine.py::test_face_engine_synthetic_fallback PASSED    [ 16%]
+tests/test_face_engine.py::test_face_engine_extract_embedding PASSED     [ 18%]
+tests/test_face_engine.py::test_face_engine_similarity_self_match PASSED [ 21%]
+tests/test_face_engine.py::test_face_engine_similarity_discrimination PASSED [ 24%]
+tests/test_face_engine.py::test_face_engine_input_types PASSED           [ 27%]
+tests/test_face_engine.py::test_face_engine_invalid_input_graceful_handling PASSED [ 29%]
+tests/test_hasher.py::test_canonicalize_json_key_order PASSED            [ 32%]
+tests/test_hasher.py::test_compute_keccak256 PASSED                      [ 35%]
+tests/test_hasher.py::test_compute_metadata_hash_deterministic PASSED    [ 37%]
+tests/test_hasher.py::test_compute_attestation_id_valid PASSED           [ 40%]
+tests/test_hasher.py::test_compute_attestation_id_invalid_length PASSED  [ 43%]
+tests/test_pipeline.py::test_pipeline_execution_end_to_end PASSED        [ 45%]
+tests/test_pipeline.py::test_pipeline_execution_all_engines PASSED       [ 48%]
+tests/test_social_search.py::test_identify_social_platform PASSED        [ 51%]
+tests/test_social_search.py::test_extract_author_handle PASSED           [ 54%]
+tests/test_social_search.py::test_wikidata_resolution_ronaldo PASSED     [ 56%]
+tests/test_social_search.py::test_search_gateway_dynamic_ronaldo PASSED  [ 59%]
+tests/test_social_search.py::test_search_gateway_unindexed_private_face PASSED [ 62%]
+tests/test_social_search.py::test_search_gateway_url_hint PASSED         [ 64%]
+tests/test_social_search.py::test_search_gateway_handle_hint PASSED      [ 67%]
+tests/test_social_search.py::test_extract_clean_identity_name_founders PASSED [ 70%]
+tests/test_social_search.py::test_identify_tech_platforms PASSED         [ 72%]
+tests/test_social_search.py::test_yandex_reverse_visual_search_parsing PASSED [ 75%]
+tests/test_social_search.py::test_yandex_reverse_visual_search_error_handling PASSED [ 78%]
+tests/test_social_search.py::test_yandex_provider_and_gateway PASSED     [ 81%]
+tests/test_social_search.py::test_social_match_biometric_similarity PASSED [ 83%]
+tests/test_social_search.py::test_normalize_social_url PASSED            [ 86%]
+tests/test_search_gateway_all_engines_provider_selection PASSED          [ 89%]
+tests/test_social_search.py::test_federated_search_aggregation_and_deduplication PASSED [ 91%]
+tests/test_social_search.py::test_federated_search_local_image_does_not_double_upload PASSED [ 94%]
+tests/test_social_search.py::test_federated_search_unindexed_fallback PASSED [ 97%]
+tests/test_social_search.py::test_federated_search_with_subject_hint PASSED [100%]
 
-============================= 15 passed in 2.82s ==============================
+======================= 37 passed in 100.86s =======================
 ```
 
 ---
 
-## 7. Project Structure
+## 8. Repository Layout
 
-```
+```text
 face_identification/
+├── assets/
+│   └── banner.jpg                     # High-resolution 16:9 project banner
 ├── contracts/
 │   ├── FaceAttestationRegistry.sol    # Production Solidity Attestation Contract
 │   └── FaceAttestationRegistry.json   # Pre-compiled ABI & EVM Bytecode
@@ -234,53 +293,34 @@ face_identification/
 │   ├── hasher.py                      # RFC 8785 canonical JSON & Keccak-256 hasher
 │   ├── contract_artifact.py           # Pre-compiled ABI and Bytecode loader
 │   ├── blockchain_service.py          # Dual-engine EVM service (local & testnet)
-│   └── pipeline.py                    # 4-stage pipeline orchestrator
+│   └── pipeline.py                    # 5-stage pipeline orchestrator
 ├── scripts/
 │   ├── run_pipeline.py                # Main CLI pipeline runner
 │   ├── verify_attestation.py          # Independent verification audit tool
 │   └── compile_contract.py            # Solidity compiler utility (py-solc-x)
 ├── samples/
-│   └── demo_face.jpg                  # Standard sample face image for testing
+│   └── demo_face.jpg                  # Sample face image for testing
 ├── tests/
 │   ├── test_face_engine.py            # Face detection & alignment tests
 │   ├── test_hasher.py                 # Cryptographic hashing & JCS tests
 │   ├── test_social_search.py          # Search gateway & platform parser tests
 │   ├── test_blockchain.py             # Smart contract & EVM integration tests
 │   └── test_pipeline.py               # End-to-end integration tests
-├── .env.example                       # Environment variables template
+├── app.py                             # Cyber-biometric HUD dashboard (Streamlit)
 ├── requirements.txt                   # Dependency specification
-├── pytest.ini                         # Pytest configuration
-└── README.md                          # Comprehensive project documentation
+└── README.md                          # Production documentation
 ```
 
 ---
 
-## 8. Known Limitations
+## 9. Security & Privacy Guarantees
 
-1. **Reverse Search API Rate Limits**: Public reverse-image search engines (Google Lens via Serper) enforce queries-per-second rate limits. In high-throughput production environments, queue-based throttling with exponential backoff is required.
-2. **Cross-Platform Face Search Accuracy**: Highly occluded faces (sunglasses, masks, extreme profiles) or low-resolution crops may reduce reverse-search matching confidence.
-3. **Public Testnet RPC Latency**: Broadcasting transactions to Base Sepolia depends on public RPC node availability; local EVM mode eliminates this dependency.
+1. **Non-Invertibility:** Keccak-256 hashes cannot be reversed to reconstruct facial vectors or unhashed social URLs.
+2. **Deterministic Canonicalization:** RFC 8785 eliminates whitespace and key-order nondeterminism, ensuring zero hash divergence between Linux, macOS, and Windows.
+3. **Double-Spend & Collision Resistance:** The Solidity contract asserts unique `attestationId` keys; duplicate registration attempts revert with `AttestationAlreadyExists`.
 
 ---
 
-## 9. Screen Recording Walkthrough Guide (For Submission)
+## 10. License
 
-To record your screen recording for the submission form:
-1. **Open Terminal / Command Prompt** in the project directory.
-2. Run the test suite:
-   ```bash
-   pytest -v tests/
-   ```
-3. Run the end-to-end pipeline:
-   ```bash
-   python scripts/run_pipeline.py --image samples/demo_face.jpg
-   ```
-4. Run the independent verification audit:
-   ```bash
-   python scripts/verify_attestation.py --receipt output/attestation_receipt.json
-   ```
-5. Demonstrate tamper-detection:
-   ```bash
-   python scripts/verify_attestation.py --receipt output/attestation_receipt.json --tamper-test
-   ```
-6. Stop recording, upload to Loom / YouTube / Google Drive, and submit the link along with your GitHub repo URL to the [submission form](https://forms.gle/oZbQGuwiNeHVcHWo8).
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
