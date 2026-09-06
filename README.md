@@ -36,45 +36,46 @@ The pipeline moves deterministically through 5 stages, from raw pixels to crypto
 ```mermaid
 flowchart TD
     subgraph S1["Stage 1: Biometric Computer Vision"]
-        A["📷 Raw Face Scan"] --> B["OpenCV Haar Cascade + Landmark Alignment"]
-        B --> C["Normalized 512x512 Crop"]
-        C --> D["ArcFace Biometric Embeddings<br/>(DeepFace / Cosine Verification)"]
-        C --> E["Keccak-256 Biometric Hash<br/>(32 bytes)"]
+        A["📷 Raw Face Portrait Scan"] --> B["OpenCV Landmark Normalization (512×512)"]
+        B --> C["ArcFace Biometric Embeddings & Keccak-256 Hash"]
     end
 
     subgraph S2["Stage 2: Federated Multi-Engine OSINT"]
-        C --> F["Search Gateway (Federated Mode)"]
-        F --> G["Yandex Reverse Visual Search"]
-        F --> H["Google Lens / Serper Gateway"]
-        F --> I["Bing Visual Search + Wikidata"]
-        G & H & I --> J["Aggregated Social Identity Graph<br/>(X, LinkedIn, Instagram, Reddit)"]
+        D["Multi-Engine Gateway (all-engines)"]
+        D --> E["Yandex Visual Search + Bing + Google Lens"]
+        E --> F["Aggregated Social Identity Graph (X, LinkedIn, IG)"]
     end
 
     subgraph S3["Stage 3: Canonical Cryptography"]
-        J --> K["RFC 8785 Canonical JSON (JCS)"]
-        K --> L["Metadata Hash<br/>(32 bytes)"]
-        E & L --> M["Commitment Attestation ID<br/>keccak256(faceHash || metaHash)"]
+        G["RFC 8785 Canonical JSON Serialization (JCS)"]
+        G --> H["Deterministic Metadata Hash (32-byte bytes32)"]
+        H --> I["Commitment Attestation ID = keccak256(faceHash || metaHash)"]
     end
 
-    subgraph S4["Stage 4: Blockchain Anchor"]
-        M --> N["FaceAttestationRegistry.sol<br/>(EVM Smart Contract)"]
-        N --> O["⛓️ Mined Block Transaction<br/>(Base Sepolia / py-evm)"]
+    subgraph S4["Stage 4: EVM Blockchain Settlement"]
+        J["FaceAttestationRegistry.sol (Smart Contract)"]
+        J --> K["⛓️ Mined Block Transaction (Base Sepolia / Local EVM)"]
     end
 
     subgraph S5["Stage 5: Verification & Tamper Audit"]
-        O --> P["Independent Audit Comparator"]
-        P --> Q{"Tamper Check"}
-        Q -->|Untampered| R["✅ Cryptographic Proof Valid"]
-        Q -->|Altered Data| S["❌ Attestation Fails / Rejected"]
+        L["Zero-Trust Cryptographic Audit Comparator"]
+        L --> M{"Parity Check"}
+        M -->|Untampered| N["✅ Proof Valid (Consensus Match)"]
+        M -->|Altered Data| O["❌ Tamper Detected (Reverted)"]
     end
+
+    C --> D
+    F --> G
+    I --> J
+    K --> L
 
     style S1 fill:#0D1117,stroke:#00FFA3,stroke-width:1.5px,color:#fff
     style S2 fill:#0D1117,stroke:#38BDF8,stroke-width:1.5px,color:#fff
     style S3 fill:#0D1117,stroke:#A855F7,stroke-width:1.5px,color:#fff
     style S4 fill:#0D1117,stroke:#FFB800,stroke-width:1.5px,color:#fff
     style S5 fill:#0D1117,stroke:#10B981,stroke-width:1.5px,color:#fff
-    style R fill:#00FFA3,stroke:#00FFA3,color:#000
-    style S fill:#EF4444,stroke:#EF4444,color:#fff
+    style N fill:#00FFA3,stroke:#00FFA3,color:#000
+    style O fill:#EF4444,stroke:#EF4444,color:#fff
 ```
 
 ---
