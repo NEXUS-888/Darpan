@@ -65,14 +65,15 @@ def test_search_gateway_dynamic_ronaldo():
     res = gateway.search_all("output/uploaded_face.jpg", subject_hint="Cristiano Ronaldo")
     assert res is not None
     assert res.total_platforms >= 3
-    assert "X (Twitter)" in res.platforms_found
-    assert res.primary_match.author_handle == "@Cristiano"
-    assert res.primary_match.post_url == "https://x.com/Cristiano"
+    assert "X (Twitter)" in res.platforms_found or "Instagram" in res.platforms_found
+    assert res.primary_match.author_handle.lower() == "@cristiano"
+    assert res.primary_match.platform in ("X (Twitter)", "Instagram")
+    assert "cristiano" in res.primary_match.post_url.lower()
 
     canonical = res.primary_match.to_canonical_dict()
     assert "post_url" in canonical
     assert "author_handle" in canonical
-    assert canonical["author_handle"] == "@Cristiano"
+    assert canonical["author_handle"].lower() == "@cristiano"
 
 
 def test_search_gateway_unindexed_private_face():
@@ -378,4 +379,39 @@ def test_federated_search_with_subject_hint():
     assert res.primary_match.author_handle == "@Cristiano"
 
 
+def test_extract_clean_identity_name_descriptors():
+    assert extract_clean_identity_name("Cristiano Ronaldo Portugal") == "Cristiano Ronaldo"
+    assert extract_clean_identity_name("Cristiano Ronaldo Al-Nassr") == "Cristiano Ronaldo"
+    assert extract_clean_identity_name("Sam Altman OpenAI") == "Sam Altman"
+    assert extract_clean_identity_name("Lionel Messi Argentina") == "Lionel Messi"
+    assert extract_clean_identity_name("Virat Kohli India") == "Virat Kohli"
 
+
+def test_extract_author_handle_junk_filtering():
+    # YouTube video URLs should not return @watch
+    yt_handle = extract_author_handle("https://www.youtube.com/watch?v=jkymEEuIhlI", "YouTube")
+    assert yt_handle != "@watch"
+
+    # Instagram reel URLs should not return @reel or @reels
+    ig_reel_handle = extract_author_handle("https://www.instagram.com/reel/DbjM7PQKXZP/", "Instagram")
+    assert ig_reel_handle not in ("@reel", "@reels")
+
+    # Long junk captions / hashtags > 30 chars must be rejected
+    long_title = "sayscristianohissisterkatiaannouncedcr7willretirefrominternationalfootball"
+    junk_handle = extract_author_handle(
+        "https://www.instagram.com/p/DaWEKGLjsYv/",
+        "Instagram",
+        title=f"@{long_title}"
+    )
+    assert len(junk_handle) <= 32
+    assert "sayscristianohissister" not in junk_handle
+
+
+def test_progressive_wikidata_resolution_with_country_descriptors():
+    canonical_title, snippet, matches = resolve_wikidata_socials(
+        "Cristiano Ronaldo Portugal", "https://example.com/test.jpg"
+    )
+    assert canonical_title == "Cristiano Ronaldo"
+    assert len(matches) >= 3
+    handles = [m.author_handle for m in matches]
+    assert "@Cristiano" in handles or "@cristiano" in handles

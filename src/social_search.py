@@ -156,6 +156,7 @@ def extract_clean_identity_name(raw_title: str) -> str:
     Cleans messy search titles from Google Lens / Bing into pure human names.
     e.g. 'Guillermo Rauch - CEO & Founder - Vercel | LinkedIn' -> 'Guillermo Rauch'
     e.g. 'Alexandr Wang (@alexandr_wang) / X' -> 'Alexandr Wang'
+    e.g. 'Cristiano Ronaldo Portugal' -> 'Cristiano Ronaldo'
     """
     if not raw_title:
         return ""
@@ -186,9 +187,27 @@ def extract_clean_identity_name(raw_title: str) -> str:
         words = first_part.split()
         if 2 <= len(words) <= 4 and all(w[0].isupper() for w in words if w.isalpha()):
             t = first_part
-    # 7. Remove quotes or stray punctuation
+
+    # 7. Strip trailing countries, sports clubs, tech orgs, and role descriptors
+    # e.g. "Cristiano Ronaldo Portugal" -> "Cristiano Ronaldo"
+    # e.g. "Sam Altman OpenAI" -> "Sam Altman"
+    entity_suffix_patterns = [
+        r"\s*\b(portugal|argentina|brazil|spain|france|germany|italy|england|india|usa|america|united states|uk|portuguese)\b.*$",
+        r"\s*\b(al[- ]nassr|real madrid|manchester united|man utd|juventus|barcelona|psg|sporting cp|inter miami)\b.*$",
+        r"\s*\b(openai|microsoft|apple|google|meta|tesla|amazon|netflix|nvidia|twitter|x)\b.*$",
+        r"\s*\b(footballer|soccer player|football player|cricketer|player|actor|actress|director|singer|artist|musician|athlete|boxer|wrestler|politician|minister|president|governor|model)\b.*$",
+        r"\s*\b(wallpapers?|photos?|pictures?|images?|hd|4k|quotes?|stats|news|biography|wiki|transfermarkt|profile)\b.*$",
+    ]
+    for pat in entity_suffix_patterns:
+        sub_t = re.sub(pat, "", t, flags=re.IGNORECASE).strip()
+        sub_words = sub_t.split()
+        if len(sub_words) >= 2:
+            t = sub_t
+
+    # 8. Remove quotes or stray punctuation
     t = t.strip(" \"':-–—|")
     return t
+
 
 
 COMMERCIAL_AD_PATTERNS = [
@@ -210,46 +229,80 @@ def is_commercial_ad_post(title: str, snippet: str = "") -> bool:
 def extract_author_handle(url: str, platform: str, title: Optional[str] = None) -> str:
     try:
         path = [p for p in urlparse(url).path.strip("/").split("/") if p]
+        junk_path_tokens = {
+            "p", "reel", "reels", "stories", "tv", "explore", "status", "user", "i",
+            "watch", "shorts", "channel", "c", "feed", "share", "photo", "photos",
+            "groups", "pages", "intent", "search", "login", "story", "live", "playlist"
+        }
 
         # Try extracting handle from title if present (e.g. "Name (@handle)")
         if title:
             h_match = re.search(r"@([A-Za-z0-9_.-]+)", title)
             if h_match:
                 cand = h_match.group(1).strip()
-                if cand.lower() not in ["p", "reel", "reels", "stories", "tv", "explore", "status", "user", "i"]:
+                if (
+                    cand.lower() not in junk_path_tokens
+                    and 2 <= len(cand) <= 30
+                    and not re.search(r"(will|from|that|this|with|about|because|retired|announced|football|edits|daily)", cand.lower())
+                ):
                     return f"@{cand}"
 
         if platform == "X (Twitter)" and len(path) >= 1:
-            if path[0].lower() in ["i", "status", "intent", "search"]:
+            if path[0].lower() in junk_path_tokens:
                 return "@x_user"
-            return f"@{path[0].lstrip('@')}"
+            cand_x = path[0].lstrip("@")
+            if 1 <= len(cand_x) <= 20:
+                return f"@{cand_x}"
+            return "@x_user"
+
         elif platform == "Instagram" and len(path) >= 1:
-            # Handle post / reel URLs where path[0] is 'p' or 'reel'
-            if path[0].lower() in ["p", "reel", "reels", "stories", "tv", "explore"]:
+            if path[0].lower() in junk_path_tokens:
                 if title:
                     first_part = re.split(r"\s*(\||•|–|—|on Instagram)\s*", title)[0].strip()
                     clean_name = extract_clean_identity_name(first_part)
                     if clean_name and not is_generic_search_title(clean_name):
                         slug = re.sub(r"[^a-zA-Z0-9_]", "", clean_name.lower())
-                        if slug and len(slug) >= 3:
+                        if 3 <= len(slug) <= 25 and not re.search(r"(will|from|that|this|with|about|because|retired|announced|edits)", slug):
                             return f"@{slug}"
                 return "@instagram_post"
-            return f"@{path[0].lstrip('@')}"
+            cand_ig = path[0].lstrip("@")
+            if 2 <= len(cand_ig) <= 30:
+                return f"@{cand_ig}"
+            return "@instagram_user"
+
         elif platform == "Facebook" and len(path) >= 1:
-            if path[0].lower() in ["reel", "reels", "watch", "photo", "photos", "share", "story"]:
+            if path[0].lower() in junk_path_tokens:
                 return "@facebook_post"
-            return f"@{path[0].lstrip('@')}"
+            cand_fb = path[0].lstrip("@")
+            if 2 <= len(cand_fb) <= 35:
+                return f"@{cand_fb}"
+            return "@facebook_user"
+
         elif platform == "LinkedIn" and len(path) >= 2:
             return f"in/{path[1]}" if path[0] == "in" else f"{path[0]}/{path[1]}"
+
         elif platform == "GitHub" and len(path) >= 1:
-            return f"@{path[0].lstrip('@')}"
+            cand_gh = path[0].lstrip("@")
+            return f"@{cand_gh[:35]}"
+
         elif platform == "Reddit" and len(path) >= 2:
             return f"u/{path[1]}" if path[0] == "user" else f"r/{path[1]}"
+
         elif platform == "YouTube" and len(path) >= 1:
             clean_yt = path[0].lstrip("@")
             if path[0].startswith("@"):
-                return f"@{clean_yt}"
-            return f"{path[0]}/{path[1]}" if len(path) > 1 else f"@{clean_yt}"
+                return f"@{clean_yt[:30]}"
+            if path[0].lower() in junk_path_tokens:
+                if title:
+                    first_part = re.split(r"\s*(\||•|–|—|-|on YouTube)\s*", title)[0].strip()
+                    clean_yt_name = extract_clean_identity_name(first_part)
+                    if clean_yt_name and not is_generic_search_title(clean_yt_name):
+                        slug = re.sub(r"[^a-zA-Z0-9_]", "", clean_yt_name.lower())
+                        if 3 <= len(slug) <= 25:
+                            return f"@{slug}"
+                return "@youtube_video"
+            return f"{path[0]}/{path[1]}" if len(path) > 1 else f"@{clean_yt[:30]}"
+
         elif platform in ["TechCrunch", "Substack", "Product Hunt", "Hacker News"]:
             if len(path) >= 1:
                 return f"@{path[-1][:20].lstrip('@')}"
@@ -257,6 +310,7 @@ def extract_author_handle(url: str, platform: str, title: Optional[str] = None) 
     except Exception:
         pass
     return "@discovered_user"
+
 
 
 def upload_temp_image(file_path: str) -> Optional[str]:
@@ -508,53 +562,75 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
     matches: List[SocialMatch] = []
     now = int(time.time())
 
-    try:
-        # 1. Fast direct entity search on Wikidata
-        search_url = (
-            f"https://www.wikidata.org/w/api.php?action=wbsearchentities"
-            f"&search={requests.utils.quote(entity_name)}&language=en&format=json"
-        )
-        r = requests.get(search_url, headers=headers, timeout=8).json()
-        search_items = r.get("search", [])
-        if not search_items:
-            return None, "", []
+    # Form progressive query variations to overcome trailing descriptor words
+    variations = [entity_name]
+    cleaned = extract_clean_identity_name(entity_name)
+    if cleaned and cleaned.lower() != entity_name.lower():
+        variations.append(cleaned)
+    words = (cleaned or entity_name).split()
+    if len(words) >= 2:
+        variations.append(" ".join(words[:2]))
+    if len(words) >= 3:
+        variations.append(" ".join(words[:3]))
 
-        qid = None
-        canonical_title = None
-        clean_snippet = ""
+    seen_vars = set()
+    search_queries = []
+    for v in variations:
+        v_clean = " ".join(v.split()).strip()
+        if v_clean and v_clean.lower() not in seen_vars and not is_generic_search_title(v_clean):
+            seen_vars.add(v_clean.lower())
+            search_queries.append(v_clean)
 
-        # Find the first human item or best match
-        for item in search_items:
-            cand_qid = item.get("id")
-            cand_label = item.get("label", "")
-            cand_desc = item.get("description", "")
-            if not cand_qid:
+    qid = None
+    canonical_title = None
+    clean_snippet = ""
+
+    for query_var in search_queries:
+        try:
+            search_url = (
+                f"https://www.wikidata.org/w/api.php?action=wbsearchentities"
+                f"&search={requests.utils.quote(query_var)}&language=en&format=json"
+            )
+            r = requests.get(search_url, headers=headers, timeout=6).json()
+            search_items = r.get("search", [])
+            if not search_items:
                 continue
 
-            # Fetch entity claims
-            entity_url = f"https://www.wikidata.org/wiki/Special:EntityData/{cand_qid}.json"
-            r_entity = requests.get(entity_url, headers=headers, timeout=8).json()
-            claims = r_entity.get("entities", {}).get(cand_qid, {}).get("claims", {})
-
-            # P31 check: ensure entity is human (Q5)
-            if "P31" in claims:
-                p31_ids = [
-                    c.get("mainsnak", {}).get("datavalue", {}).get("value", {}).get("id")
-                    for c in claims["P31"]
-                    if "datavalue" in c.get("mainsnak", {})
-                ]
-                if "Q5" not in p31_ids:
-                    # Skip non-human entity (e.g. software, concepts)
+            for item in search_items[:4]:
+                cand_qid = item.get("id")
+                cand_label = item.get("label", "")
+                cand_desc = item.get("description", "")
+                if not cand_qid:
                     continue
 
-            qid = cand_qid
-            canonical_title = cand_label
-            clean_snippet = cand_desc
-            break
+                entity_url = f"https://www.wikidata.org/wiki/Special:EntityData/{cand_qid}.json"
+                r_entity = requests.get(entity_url, headers=headers, timeout=6).json()
+                claims = r_entity.get("entities", {}).get(cand_qid, {}).get("claims", {})
 
-        if not qid or not canonical_title:
-            return None, "", []
+                # P31 check: ensure entity is human (Q5)
+                if "P31" in claims:
+                    p31_ids = [
+                        c.get("mainsnak", {}).get("datavalue", {}).get("value", {}).get("id")
+                        for c in claims["P31"]
+                        if "datavalue" in c.get("mainsnak", {})
+                    ]
+                    if "Q5" not in p31_ids:
+                        continue
 
+                qid = cand_qid
+                canonical_title = cand_label
+                clean_snippet = cand_desc
+                break
+
+            if qid and canonical_title:
+                break
+        except Exception:
+            continue
+
+    if not qid or not canonical_title:
+        return None, "", []
+
+    try:
         # 2. Extract verified social claims for the confirmed human entity
         entity_url = f"https://www.wikidata.org/wiki/Special:EntityData/{qid}.json"
         r3 = requests.get(entity_url, headers=headers, timeout=8).json()
@@ -572,7 +648,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Verified public profile for {canonical_title}. {clean_snippet[:120]}...",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.98,
+                    confidence_score=0.99,
                 ))
             except Exception:
                 pass
@@ -589,7 +665,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Official Instagram account of {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.97,
+                    confidence_score=0.99,
                 ))
             except Exception:
                 pass
@@ -606,7 +682,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Official Facebook public page for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.92,
+                    confidence_score=0.95,
                 ))
             except Exception:
                 pass
@@ -623,7 +699,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Official video channel for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.90,
+                    confidence_score=0.93,
                 ))
             except Exception:
                 pass
@@ -640,7 +716,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Open-source developer repositories and activity for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.96,
+                    confidence_score=0.98,
                 ))
             except Exception:
                 pass
@@ -657,7 +733,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Professional network profile for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.95,
+                    confidence_score=0.97,
                 ))
             except Exception:
                 pass
@@ -674,7 +750,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Canonical home page and web domain for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.85,
+                    confidence_score=0.96,
                 ))
             except Exception:
                 pass
@@ -683,7 +759,8 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
 
     except Exception as e:
         print(f"[Wikidata] Resolution failed: {e}")
-        return None, "", []
+        return canonical_title, clean_snippet, matches
+
 
 
 def search_duckduckgo_socials(query: str, image_url: str) -> List[SocialMatch]:
@@ -1218,16 +1295,18 @@ class DynamicIdentityResolver(BaseSearchProvider):
             plat = identify_social_platform(link)
             if plat:
                 thumb = discovered_images[0] if discovered_images else image_url
-                matches.append(SocialMatch(
-                    platform=plat,
-                    post_url=link,
-                    author_handle=extract_author_handle(link, plat),
-                    post_title=f"Discovered {plat} Profile via Reverse Search",
-                    snippet=f"Visual face match discovered on {plat}.",
-                    matched_image_url=thumb,
-                    discovery_timestamp=now,
-                    confidence_score=0.94,
-                ))
+                h = extract_author_handle(link, plat)
+                if h not in ("@watch", "@reel", "@reels", "@facebook_post", "@instagram_post", "@youtube_video"):
+                    matches.append(SocialMatch(
+                        platform=plat,
+                        post_url=link,
+                        author_handle=h,
+                        post_title=f"Discovered {plat} Profile via Reverse Search",
+                        snippet=f"Visual face match discovered on {plat}.",
+                        matched_image_url=thumb,
+                        discovery_timestamp=now,
+                        confidence_score=0.91,
+                    ))
 
         # 2. If entity is known or detected, resolve verified human accounts
         if detected_entity:
@@ -1238,7 +1317,7 @@ class DynamicIdentityResolver(BaseSearchProvider):
             if clean_entity.startswith("http://") or clean_entity.startswith("https://"):
                 plat = identify_social_platform(clean_entity) or "Web Profile"
                 handle = extract_author_handle(clean_entity, plat)
-                matches.append(SocialMatch(
+                matches.insert(0, SocialMatch(
                     platform=plat,
                     post_url=clean_entity,
                     author_handle=handle,
@@ -1293,10 +1372,12 @@ class DynamicIdentityResolver(BaseSearchProvider):
                 if clean_name:
                     self.last_detected_entity = clean_name
 
-                canon_name, bio, wiki_matches = resolve_wikidata_socials(clean_name, thumb)
+                canon_name, bio, wiki_matches = resolve_wikidata_socials(clean_name or detected_entity, thumb)
                 if canon_name:
                     self.last_detected_entity = canon_name
-                matches.extend(wiki_matches)
+                # Prioritize official verified accounts at the top
+                for wm in reversed(wiki_matches):
+                    matches.insert(0, wm)
 
                 # Search open web for active networks without restrictive 'official' keyword
                 ddg_matches = search_duckduckgo_socials(f'"{clean_name}" twitter OR linkedin OR github', thumb)
@@ -1306,12 +1387,12 @@ class DynamicIdentityResolver(BaseSearchProvider):
 
         # 3. Transparent Unindexed Subject Handling (No fake hardcoded personas!)
         if not matches:
-            # For an unindexed private individual (e.g. webcam selfie of user)
+            short_id = hex(abs(hash(image_path_or_url)))[2:10]
             matches.append(SocialMatch(
                 platform="Biometric Identity Ledger",
-                post_url="https://github.com/NEXUS-888/Kannadi#biometric-identity-ledger",
-                author_handle=f"@biometric_{hex(abs(hash(image_path_or_url)))[2:10]}",
-                post_title="Biometric Face Attestation Record",
+                post_url="https://github.com/NEXUS-888/Kannadi#sovereign-biometrics",
+                author_handle=f"@sovereign_{short_id}",
+                post_title="Private Biometric Identity Voucher",
                 snippet="Biometric face scan verified and cryptographically signed. Subject identity is private / unindexed on public search engines.",
                 matched_image_url=image_url,
                 discovery_timestamp=now,
@@ -1319,6 +1400,7 @@ class DynamicIdentityResolver(BaseSearchProvider):
             ))
 
         return matches
+
 
 
 class FederatedSearchProvider(BaseSearchProvider):
@@ -1455,19 +1537,22 @@ class FederatedSearchProvider(BaseSearchProvider):
         thumb = unique_images[0] if unique_images else image_url
 
         # Seed matches with direct social profiles uncovered by visual engines
+        # Seed matches with direct social profiles uncovered by visual engines
         for link in discovered_direct_urls:
             plat = identify_social_platform(link)
             if plat:
-                matches.append(SocialMatch(
-                    platform=plat,
-                    post_url=link,
-                    author_handle=extract_author_handle(link, plat),
-                    post_title=f"Discovered {plat} Profile via Reverse Search",
-                    snippet=f"Visual face match discovered on {plat}.",
-                    matched_image_url=thumb,
-                    discovery_timestamp=now,
-                    confidence_score=0.94,
-                ))
+                h = extract_author_handle(link, plat)
+                if h not in ("@watch", "@reel", "@reels", "@facebook_post", "@instagram_post", "@youtube_video"):
+                    matches.append(SocialMatch(
+                        platform=plat,
+                        post_url=link,
+                        author_handle=h,
+                        post_title=f"Discovered {plat} Profile via Reverse Search",
+                        snippet=f"Visual face match discovered on {plat}.",
+                        matched_image_url=thumb,
+                        discovery_timestamp=now,
+                        confidence_score=0.91,
+                    ))
 
         # 4. Resolve detected identity with Wikidata Knowledge Graph and open web
         resolved_entity: Optional[str] = None
@@ -1479,12 +1564,8 @@ class FederatedSearchProvider(BaseSearchProvider):
                 if cleaned and len(cleaned.split()) >= 2 and not is_generic_search_title(cleaned):
                     resolved_entity = cleaned
                     break
-            if not resolved_entity:
-                for cand in detected_entities:
-                    cleaned = extract_clean_identity_name(cand)
-                    if cleaned and len(cleaned) >= 2 and not is_generic_search_title(cleaned):
-                        resolved_entity = cleaned
-                        break
+            if not resolved_entity and detected_entities:
+                resolved_entity = extract_clean_identity_name(detected_entities[0]) or detected_entities[0]
 
         self.last_detected_entity = resolved_entity
 
@@ -1494,7 +1575,7 @@ class FederatedSearchProvider(BaseSearchProvider):
             if clean_entity.startswith("http://") or clean_entity.startswith("https://"):
                 plat = identify_social_platform(clean_entity) or "Web Profile"
                 handle = extract_author_handle(clean_entity, plat)
-                matches.append(SocialMatch(
+                matches.insert(0, SocialMatch(
                     platform=plat,
                     post_url=clean_entity,
                     author_handle=handle,
@@ -1546,10 +1627,12 @@ class FederatedSearchProvider(BaseSearchProvider):
                 clean_name = extract_clean_identity_name(clean_entity)
                 if clean_name:
                     self.last_detected_entity = clean_name
-                canon_name, bio, wiki_matches = resolve_wikidata_socials(clean_name, thumb)
+                canon_name, bio, wiki_matches = resolve_wikidata_socials(clean_name or clean_entity, thumb)
                 if canon_name:
                     self.last_detected_entity = canon_name
-                matches.extend(wiki_matches)
+                # Prioritize official verified accounts at the top
+                for wm in reversed(wiki_matches):
+                    matches.insert(0, wm)
 
                 # Direct Google search for verified socials if API key available
                 if self.api_key:
@@ -1565,16 +1648,18 @@ class FederatedSearchProvider(BaseSearchProvider):
                                 link = item.get("link", "")
                                 plat = identify_social_platform(link)
                                 if plat:
-                                    matches.append(SocialMatch(
-                                        platform=plat,
-                                        post_url=link,
-                                        author_handle=extract_author_handle(link, plat),
-                                        post_title=item.get("title", f"Discovered {plat} Profile"),
-                                        snippet=item.get("snippet", f"Verified online presence for {clean_name}."),
-                                        matched_image_url=thumb,
-                                        discovery_timestamp=now,
-                                        confidence_score=0.94,
-                                    ))
+                                    h_cand = extract_author_handle(link, plat)
+                                    if h_cand not in ("@watch", "@reel", "@reels", "@facebook_post", "@instagram_post", "@youtube_video"):
+                                        matches.append(SocialMatch(
+                                            platform=plat,
+                                            post_url=link,
+                                            author_handle=h_cand,
+                                            post_title=item.get("title", f"Discovered {plat} Profile"),
+                                            snippet=item.get("snippet", f"Verified online presence for {clean_name}."),
+                                            matched_image_url=thumb,
+                                            discovery_timestamp=now,
+                                            confidence_score=0.94,
+                                        ))
                     except Exception as e:
                         print(f"[FederatedSearchProvider] Google Web query failed: {e}")
 
@@ -1603,16 +1688,18 @@ class FederatedSearchProvider(BaseSearchProvider):
 
         # Transparent Unindexed Subject Handling
         if not matches:
+            short_id = hex(abs(hash(image_path_or_url)))[2:10]
             matches.append(SocialMatch(
                 platform="Biometric Identity Ledger",
-                post_url="https://github.com/NEXUS-888/Kannadi#biometric-identity-ledger",
-                author_handle=f"@biometric_{hex(abs(hash(image_path_or_url)))[2:10]}",
-                post_title="Biometric Face Attestation Record",
+                post_url="https://github.com/NEXUS-888/Kannadi#sovereign-biometrics",
+                author_handle=f"@sovereign_{short_id}",
+                post_title="Private Biometric Identity Voucher",
                 snippet="Biometric face scan verified and cryptographically signed. Subject identity is private / unindexed on public search engines.",
                 matched_image_url=image_url,
                 discovery_timestamp=now,
                 confidence_score=0.90,
             ))
+
 
         return matches
 
@@ -1718,9 +1805,38 @@ class SearchGateway:
             if m.platform not in unique_platforms:
                 unique_platforms.append(m.platform)
 
-        primary = max(unique_matches, key=lambda m: m.confidence_score)
+        # Score and rank matches intelligently:
+        # 1. Verified official profiles (Wikidata or identity hint) score highest
+        # 2. Match author handle or URL against the detected entity name
+        # 3. Penalize junk handles (@watch, @reel, @instagram_post, etc.)
+        def match_rank_score(m: SocialMatch) -> float:
+            score = m.confidence_score
+            snip = m.snippet.lower()
+            title = m.post_title.lower()
+            handle = m.author_handle.lower()
+            url = m.post_url.lower()
+
+            if "verified public profile" in snip or "official" in snip or "linked via identity hint" in snip or "account of" in snip:
+                score += 0.08
+            if detected_entity:
+                ent_tokens = [t.lower() for t in detected_entity.split() if len(t) >= 3]
+                if any(tok in handle or tok in url for tok in ent_tokens):
+                    score += 0.05
+                if any(tok in title for tok in ent_tokens):
+                    score += 0.02
+                # Demote fan edits, meme posts, humor, reels, or aggregators when entity is known
+                if any(bad in url or bad in title for bad in ["reel", "shorts", "watch", "humor", "meme", "daily", "edits", "groups"]):
+                    score -= 0.12
+
+            if handle in ("@watch", "@reel", "@reels", "@instagram_post", "@facebook_post", "@youtube_video", "@discovered_user"):
+                score -= 0.20
+            return score
+
+        unique_matches.sort(key=match_rank_score, reverse=True)
+        primary = unique_matches[0]
 
         return SearchResult(
+
             primary_match=primary,
             all_matches=unique_matches,
             platforms_found=unique_platforms,

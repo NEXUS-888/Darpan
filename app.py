@@ -30,11 +30,12 @@ from src.blockchain_service import BlockchainService
 
 # Page configuration
 st.set_page_config(
-    page_title="Kannadi // Proof of Identity",
+    page_title="Kannadi // Biometric Identity Protocol",
     page_icon="🪞",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
 
 # -----------------------------------------------------------------------------
 # BESPOKE CYBER-BIOMETRIC DESIGN SYSTEM & ANIMATIONS
@@ -558,11 +559,12 @@ st.markdown("""
         <div>
             <div class="kannadi-title-row">
                 <span class="kannadi-title">KANNADI</span>
-                <span class="kannadi-version-tag">IDENTITY PROTOCOL</span>
+                <span class="kannadi-version-tag">BIOMETRIC IDENTITY PROTOCOL</span>
             </div>
-            <p class="kannadi-subtitle">PROOF OF IDENTITY // ON-CHAIN FACE VERIFICATION</p>
+            <p class="kannadi-subtitle">ON-CHAIN FACE VERIFICATION & IDENTITY ATTESTATION</p>
         </div>
     </div>
+
     <div class="kannadi-telemetry">
         <div class="telemetry-item">
             <span class="telemetry-label">CONSENSUS</span>
@@ -873,15 +875,43 @@ with tab_pipeline:
                 st.markdown(f"""
                 <div style="background: rgba(0, 255, 163, 0.06); border: 1px solid rgba(0, 255, 163, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span class="platform-pill platform-generic">🔒 Private Biometric Anchor</span>
+                        <span class="platform-pill platform-generic">🔒 Self-Sovereign Biometric Voucher</span>
                         <span class="live-node-pill" style="font-size: 0.68rem; padding: 3px 8px;">ON-CHAIN</span>
                     </div>
                     <div style="font-size: 1.1rem; font-weight: 800; color: #F8FAFC;">{post['author_handle']}</div>
                     <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 6px; line-height: 1.4;">
-                        Face normalized and cryptographically signed. Subject identity is unindexed on public search engines.
+                        Face normalized and cryptographically anchored to EVM Block #{bc['block_number']}. No matching public web footprint found (Privacy Preserved).
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+
+                with st.expander("🔗 Link Social Profile to this Face Hash"):
+                    st.caption("Provide your personal X, Instagram, GitHub, or LinkedIn handle to attach your real identity to this biometric hash on the EVM:")
+                    col_b1, col_b2 = st.columns([2, 1])
+                    with col_b1:
+                        bind_input = st.text_input(
+                            "Handle / Profile URL",
+                            placeholder="e.g. @username or in/profile",
+                            key="inline_bind_input",
+                            label_visibility="collapsed"
+                        )
+                    with col_b2:
+                        if st.button("⚡ Attest Handle", key="inline_bind_btn", type="primary", width="stretch"):
+                            if bind_input and bind_input.strip():
+                                clean_serper_key = serper_key_input.strip() if (serper_key_input and serper_key_input.strip()) else ""
+                                p_rebind = VeriFacePipeline(
+                                    network=network_choice,
+                                    search_provider=search_mode,
+                                    api_key=clean_serper_key,
+                                    output_dir="output"
+                                )
+                                src_file = rc["input_image"].get("source_path") or image_path
+                                st.session_state.last_receipt = p_rebind.execute(
+                                    src_file,
+                                    subject_hint=bind_input.strip()
+                                )
+                                st.rerun()
+
             else:
                 platform_class = "platform-instagram" if "Instagram" in post['platform'] else ("platform-x" if "X" in post['platform'] or "Twitter" in post['platform'] else "platform-linkedin")
                 st.markdown(f"""
