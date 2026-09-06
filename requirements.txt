@@ -10,3 +10,5 @@ py-solc-x>=2.0.0
 pytest>=8.0.0
 numpy>=1.24.0
 streamlit>=1.30.0
+# Optional Biometric Face Verification with ArcFace (supported on Python <=3.12)
+deepface>=0.0.90; python_version < '3.13'

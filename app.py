@@ -30,7 +30,7 @@ from src.blockchain_service import BlockchainService
 
 # Page configuration
 st.set_page_config(
-    page_title="Kannadi // Biometric Mirror",
+    page_title="Kannadi // Proof of Identity",
     page_icon="🪞",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -417,11 +417,136 @@ st.markdown("""
         animation: tamperWarningStrobe 1.6s infinite ease-in-out;
     }
 
+    /* Generic Biometric Wireframe Scanner Frame */
+    .generic-scanner-card {
+        position: relative;
+        width: 100%;
+        max-width: 280px;
+        height: 250px;
+        background: linear-gradient(180deg, rgba(8, 14, 24, 0.88) 0%, rgba(3, 6, 12, 0.95) 100%);
+        border: 1px solid rgba(0, 255, 163, 0.3);
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 6px 0 10px 0;
+        box-shadow: 0 0 25px rgba(0, 255, 163, 0.1), inset 0 0 20px rgba(0, 255, 163, 0.04);
+    }
+    .scanner-svg {
+        width: 175px;
+        height: 175px;
+        filter: drop-shadow(0 0 8px rgba(0, 255, 163, 0.25));
+    }
+    .scanner-corner {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-color: #00FFA3;
+        border-style: solid;
+        pointer-events: none;
+        z-index: 5;
+    }
+    .corner-tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+    .corner-tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
+    .corner-bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
+    .corner-br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+    .scanner-beam {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent 0%, #00FFA3 25%, #FFFFFF 50%, #00FFA3 75%, transparent 100%);
+        box-shadow: 0 0 12px #00FFA3, 0 0 20px #00FFA3;
+        animation: genericLaserScan 2.6s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 6;
+    }
+    @keyframes genericLaserScan {
+        0% { top: 6%; opacity: 0.2; }
+        25% { opacity: 1; }
+        50% { top: 92%; opacity: 1; }
+        75% { opacity: 1; }
+        100% { top: 6%; opacity: 0.2; }
+    }
+    @keyframes hudRotateSlow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .rotating-hud-ring {
+        transform-origin: 100px 110px;
+        animation: hudRotateSlow 24s linear infinite;
+    }
+    .hud-node-dot {
+        animation: livePulseDot 2s ease-in-out infinite;
+    }
+    .scanner-caption-pill {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.66rem;
+        font-weight: 700;
+        color: #00FFA3;
+        background: rgba(0, 255, 163, 0.1);
+        border: 1px solid rgba(0, 255, 163, 0.3);
+        border-radius: 4px;
+        padding: 2px 8px;
+        letter-spacing: 0.08em;
+        margin-top: -6px;
+        z-index: 5;
+    }
+    .scanner-sub-caption {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.62rem;
+        color: #94A3B8;
+        letter-spacing: 0.04em;
+        margin-top: 3px;
+        z-index: 5;
+    }
+
     /* Streamlit overrides */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
+SCANNER_STANDBY_HTML = """
+<div class="generic-scanner-card">
+<div class="scanner-corner corner-tl"></div>
+<div class="scanner-corner corner-tr"></div>
+<div class="scanner-corner corner-bl"></div>
+<div class="scanner-corner corner-br"></div>
+<div class="scanner-beam"></div>
+<div style="font-size: 3rem; margin-bottom: 8px; filter: drop-shadow(0 0 16px rgba(0, 255, 163, 0.5));">👤</div>
+<div class="scanner-caption-pill">BIO-VIEWFINDER // STANDBY</div>
+<div class="scanner-sub-caption">Awaiting Portrait Input</div>
+</div>
+"""
+
+
+IDLE_STANDBY_HTML = """
+<div style="background: linear-gradient(180deg, rgba(12, 19, 31, 0.75) 0%, rgba(6, 10, 16, 0.9) 100%); border: 1px dashed rgba(0, 255, 163, 0.25); border-radius: 16px; padding: 36px 28px; text-align: center; margin-top: 24px; box-shadow: 0 4px 25px rgba(0,0,0,0.5);">
+    <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(0, 255, 163, 0.1); border: 1px solid rgba(0, 255, 163, 0.3); padding: 4px 14px; border-radius: 9999px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #00FFA3; font-weight: 700; letter-spacing: 0.08em; margin-bottom: 14px;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: #00FFA3; box-shadow: 0 0 8px #00FFA3;"></span>
+        SYSTEM STANDBY // AWAITING BIOMETRIC INGESTION
+    </div>
+    <h3 style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.25rem; font-weight: 800; color: #F8FAFC; margin-bottom: 8px;">
+        Proof of Identity & Verification Pipeline Ready
+    </h3>
+    <p style="font-size: 0.85rem; color: #94A3B8; max-width: 640px; margin: 0 auto 20px auto; line-height: 1.5;">
+        No active attestation in this session. Provide a portrait photo, webcam capture, or benchmark sample above, then click <strong style="color: #00FFA3;">⚡ Attest Biometric Identity On-Chain</strong> to run real-time biometric alignment, multi-engine social discovery, and EVM smart contract notarization.
+    </p>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #64748B;">
+        <span style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px; color: #E2E8F0;">1. 512×512 Normalized Crop</span>
+        <span style="color: #00FFA3;">➔</span>
+        <span style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px; color: #E2E8F0;">2. Federated Multi-Engine Search</span>
+        <span style="color: #00FFA3;">➔</span>
+        <span style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px; color: #E2E8F0;">3. RFC 8785 Canonical Hash</span>
+        <span style="color: #00FFA3;">➔</span>
+        <span style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px; color: #E2E8F0;">4. EVM Blockchain Settlement</span>
+    </div>
+</div>
+"""
 
 # -----------------------------------------------------------------------------
 # TOP NAVIGATION: KANNADI CYBER-BIOMETRIC TERMINAL
@@ -433,9 +558,9 @@ st.markdown("""
         <div>
             <div class="kannadi-title-row">
                 <span class="kannadi-title">KANNADI</span>
-                <span class="kannadi-version-tag">VERIFACE // v2.6</span>
+                <span class="kannadi-version-tag">IDENTITY PROTOCOL</span>
             </div>
-            <p class="kannadi-subtitle">DECENTRALIZED BIOMETRIC MIRROR & EVM ATTESTATION PROTOCOL</p>
+            <p class="kannadi-subtitle">PROOF OF IDENTITY // ON-CHAIN FACE VERIFICATION</p>
         </div>
     </div>
     <div class="kannadi-telemetry">
@@ -456,6 +581,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
+# SESSION STATE INITIALIZATION
+# -----------------------------------------------------------------------------
+if "last_receipt" not in st.session_state:
+    st.session_state.last_receipt = None
+
+# -----------------------------------------------------------------------------
 # SIDEBAR: SYSTEM & EXPLORER TELEMETRY
 # -----------------------------------------------------------------------------
 with st.sidebar:
@@ -468,9 +599,9 @@ with st.sidebar:
     )
     search_mode = st.selectbox(
         "Visual Discovery Engine",
-        ["auto", "serper", "bing-wikidata"],
+        ["all-engines", "auto", "yandex", "serper", "bing-wikidata"],
         index=0,
-        help="'auto' detects Serper Google Lens, falling back to open search if needed.",
+        help="'all-engines' federated multi-engine queries Yandex, Google Lens, and Bing concurrently. 'auto' selects primary available engine. 'yandex' runs dedicated Yandex visual search.",
     )
     env_serper = os.getenv("SERPER_API_KEY", "")
     serper_key_input = st.text_input(
@@ -480,29 +611,34 @@ with st.sidebar:
         help="Loaded automatically from .env. Powers Google Lens reverse image matching.",
     )
 
+    has_serper = bool(serper_key_input and serper_key_input.strip())
+    if search_mode in ("all-engines", "federated"):
+        engine_str = "Yandex + Bing + Google Lens" if has_serper else "Yandex + Bing"
+        visual_search_spec = f"`Federated Multi-Engine ({engine_str})`"
+    elif search_mode == "yandex":
+        visual_search_spec = "`Yandex Reverse Visual Search`"
+    elif search_mode == "serper":
+        visual_search_spec = "`Serper Google Lens`"
+    else:
+        visual_search_spec = "`Dynamic Multi-Engine (Bing + Wikidata)`"
+
     st.markdown("---")
     st.markdown("### Telemetry Spec")
-    st.markdown("""
+    st.markdown(f"""
     - **Resolution**: `512×512 Normalized`
+    - **Biometrics**: `ArcFace (DeepFace / Biometric Fallback)`
+    - **Visual Search**: {visual_search_spec}
     - **Cryptography**: `Keccak-256 (SHA3)`
     - **Standard**: `RFC 8785 Canonical JCS`
     - **Registry**: `Solidity 0.8.20`
     """)
     st.markdown("[View Repository on GitHub ↗](https://github.com/NEXUS-888/Kannadi.git)")
 
-# -----------------------------------------------------------------------------
-# SESSION STATE INITIALIZATION
-# -----------------------------------------------------------------------------
-if "last_receipt" not in st.session_state:
-    receipt_file = "output/attestation_receipt.json"
-    if os.path.exists(receipt_file):
-        try:
-            with open(receipt_file, "r", encoding="utf-8") as f:
-                st.session_state.last_receipt = json.load(f)
-        except Exception:
+    if st.session_state.get("last_receipt"):
+        st.markdown("---")
+        if st.button("🔄 Reset / Clear Attestation", type="secondary", width="stretch"):
             st.session_state.last_receipt = None
-    else:
-        st.session_state.last_receipt = None
+            st.rerun()
 
 # Navigation Tabs
 tab_pipeline, tab_verify, tab_contract = st.tabs([
@@ -540,10 +676,12 @@ with tab_pipeline:
                 with open(temp_up, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 image_path = temp_up
-                st.image(image_path, width=280)
+                st.image(image_path, caption="Ingested Face Portrait", width=280)
             elif os.path.exists("output/uploaded_face.jpg"):
                 image_path = "output/uploaded_face.jpg"
-                st.image(image_path, width=280)
+                st.image(image_path, caption="Current Ingested Portrait", width=280)
+            else:
+                st.markdown(SCANNER_STANDBY_HTML, unsafe_allow_html=True)
 
         elif input_mode == "📸 Live Camera":
             cam_picture = st.camera_input("Capture selfie from webcam")
@@ -552,14 +690,15 @@ with tab_pipeline:
                 with open(temp_cam, "wb") as f:
                     f.write(cam_picture.getbuffer())
                 image_path = temp_cam
-            elif os.path.exists("output/uploaded_face.jpg"):
-                image_path = "output/uploaded_face.jpg"
-                st.image(image_path, width=280)
+                st.image(image_path, caption="Live Webcam Capture", width=280)
 
         else:
-            image_path = "samples/demo_face.jpg"
-            if os.path.exists(image_path):
-                st.image(image_path, caption="Default Evaluation Sample (demo_face.jpg)", width=280)
+            sample_file = "samples/demo_face.jpg"
+            if os.path.exists(sample_file):
+                image_path = sample_file
+                st.image(image_path, caption="Benchmark Evaluation Sample (Cristiano Ronaldo)", width=280)
+            else:
+                st.error("samples/demo_face.jpg not found.")
 
     with col_action:
         st.markdown("#### 2. Identity Binding & Consensus Settlement")
@@ -584,14 +723,20 @@ with tab_pipeline:
 
                 try:
                     prog_bar.progress(25, text="Stage 1/4: Aligning facial landmarks & generating 512×512 normalized crop...")
+                    clean_serper_key = serper_key_input.strip() if (serper_key_input and serper_key_input.strip()) else ""
                     pipeline = VeriFacePipeline(
                         network=network_choice,
                         search_provider=search_mode,
-                        api_key=serper_key_input or None,
+                        api_key=clean_serper_key,
                         output_dir="output"
                     )
 
-                    prog_bar.progress(55, text="Stage 2/4: Discovering social accounts across open web...")
+                    if search_mode in ("all-engines", "federated"):
+                        engine_str = "Yandex + Bing + Google Lens" if clean_serper_key else "Yandex + Bing"
+                        stage2_text = f"Stage 2/4: Querying federated visual engines ({engine_str}) & Wikidata..."
+                    else:
+                        stage2_text = "Stage 2/4: Discovering social accounts across open web..."
+                    prog_bar.progress(55, text=stage2_text)
                     time.sleep(0.2)
 
                     prog_bar.progress(80, text="Stage 3/4: Generating canonical RFC 8785 Keccak-256 commitments...")
@@ -604,7 +749,10 @@ with tab_pipeline:
                     )
 
                     prog_bar.progress(100, text="Attestation Finalized!")
-                    status_placeholder.success("✅ Transaction Mined! Attestation permanently anchored on EVM.")
+                    if search_mode in ("all-engines", "federated"):
+                        status_placeholder.success("✅ Transaction Mined! Federated multi-engine attestation permanently anchored on EVM.")
+                    else:
+                        status_placeholder.success("✅ Transaction Mined! Attestation permanently anchored on EVM.")
                     st.session_state.last_receipt = receipt
 
                 except Exception as e:
@@ -630,13 +778,19 @@ with tab_pipeline:
             or "veriface.protocol" in post.get("post_url", "")
         )
 
+        # Biometric similarity telemetry
+        bio_info = rc.get("biometric_verification", {})
+        bio_similarity = bio_info.get("score", rc['input_image']['confidence'])
+        bio_model = bio_info.get("model_used", "ArcFace")
+        bio_verified = bio_info.get("verified", True)
+
         # 4-Up High-Contrast Telemetry Bar
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
         with col_m1:
             st.markdown(f"""
             <div class="telemetry-card">
-                <span class="card-label">BIO-CONFIDENCE</span>
-                <span class="card-number" style="color: #00FFA3;">{rc['input_image']['confidence']*100:.1f}%</span>
+                <span class="card-label">ARCFACE BIOMETRICS</span>
+                <span class="card-number" style="color: #00FFA3;">{bio_similarity*100:.1f}%</span>
             </div>
             """, unsafe_allow_html=True)
         with col_m2:
@@ -673,6 +827,14 @@ with tab_pipeline:
             if crop_file and os.path.exists(crop_file):
                 st.image(crop_file, width=260)
 
+            # ArcFace Biometric Score Pill
+            st.markdown(f"""
+            <div style="margin: 8px 0; padding: 7px 12px; background: rgba(0, 255, 163, 0.08); border-radius: 8px; border: 1px solid rgba(0, 255, 163, 0.25); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.78rem; color: #94A3B8;">ArcFace Match</span>
+                <span style="font-size: 0.84rem; font-weight: 700; color: #00FFA3;">{bio_similarity*100:.1f}% {'(VERIFIED ✓)' if bio_verified else ''}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
             st.caption("Keccak-256 Face Fingerprint (Normalized 512×512)")
             st.markdown(f'<span class="cyber-hash-pill">{rc["cryptography"]["face_hash"]}</span>', unsafe_allow_html=True)
             st.caption("🔒 Zero biometric pixels stored on-chain. GDPR Article 9 & CCPA compliant.")
@@ -680,6 +842,24 @@ with tab_pipeline:
         # Column 2: Social Identity Graph
         with col_c2:
             st.markdown("#### 2. Discovered Identity Graph")
+            engine_badge = summary.get("search_engine_used", "Federated Multi-Engine" if search_mode in ("all-engines", "federated") else "Multi-Engine")
+            st.markdown(f"""
+            <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.72rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em;">ENGINE:</span>
+                <span style="font-size: 0.74rem; font-weight: 700; color: #00E5FF; background: rgba(0, 229, 255, 0.08); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(0, 229, 255, 0.2);">{engine_badge}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            matched_thumbs = summary.get("matched_image_urls", [])
+            if matched_thumbs:
+                st.caption(f"Discovered Face Thumbnails ({len(matched_thumbs)} across engines)")
+                thumb_cols = st.columns(min(len(matched_thumbs[:4]), 4))
+                for idx, t_url in enumerate(matched_thumbs[:4]):
+                    with thumb_cols[idx]:
+                        try:
+                            st.image(t_url, width=60)
+                        except Exception:
+                            pass
 
             if entity_name:
                 st.markdown(f"""
@@ -771,6 +951,8 @@ with tab_pipeline:
                 mime="application/json",
                 width="stretch"
             )
+    else:
+        st.markdown(IDLE_STANDBY_HTML, unsafe_allow_html=True)
 
 
 # =============================================================================
