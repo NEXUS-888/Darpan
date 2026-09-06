@@ -58,10 +58,14 @@ if [ "$OS_TYPE" = "Linux" ]; then
     fi
 fi
 
-# 5. Ensure Output Directory Exists
+# 5. Ensure Biometric Models Are Pre-warmed / Downloaded
+echo "  🧠 Checking InsightFace biometric models (buffalo_sc)..."
+python -c "from src.face_engine import _get_insightface_app; _get_insightface_app('buffalo_sc')"
+
+# 6. Ensure Output Directory Exists
 mkdir -p output
 
-# 6. Launch Application
+# 7. Launch Application
 echo "  🌐 Launching Streamlit web dashboard..."
 echo "     URL: http://localhost:8501"
 echo "=========================================================="

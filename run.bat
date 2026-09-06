@@ -50,10 +50,14 @@ if %ERRORLEVEL% neq 0 (
     echo      Attempting to continue...
 )
 
-:: 4. Ensure Output Directory Exists
+:: 4. Ensure Biometric Models Are Pre-warmed / Downloaded
+echo   🧠 Checking InsightFace biometric models (buffalo_sc)...
+python -c "from src.face_engine import _get_insightface_app; _get_insightface_app('buffalo_sc')"
+
+:: 5. Ensure Output Directory Exists
 if not exist "output" mkdir output
 
-:: 5. Launch Application
+:: 6. Launch Application
 echo   🌐 Launching Streamlit web dashboard...
 echo      URL: http://localhost:8501
 echo ==========================================================
