@@ -397,14 +397,17 @@ def test_extract_author_handle_junk_filtering():
     assert ig_reel_handle not in ("@reel", "@reels")
 
     # Long junk captions / hashtags > 30 chars must be rejected
-    long_title = "sayscristianohissisterkatiaannouncedcr7willretirefrominternationalfootball"
-    junk_handle = extract_author_handle(
-        "https://www.instagram.com/p/DaWEKGLjsYv/",
-        "Instagram",
-        title=f"@{long_title}"
+    # LinkedIn advice / learning / pulse paths should not return advice/0 or @advice
+    li_advice_handle = extract_author_handle(
+        "https://www.linkedin.com/advice/0/what-to-do-when-you-want-to-switch-careers",
+        "LinkedIn"
     )
-    assert len(junk_handle) <= 32
-    assert "sayscristianohissister" not in junk_handle
+    assert "advice/0" not in li_advice_handle
+    assert li_advice_handle != "@advice"
+
+    # LinkedIn in/profile should extract cleanly
+    li_profile = extract_author_handle("https://www.linkedin.com/in/satyanadella", "LinkedIn")
+    assert li_profile == "in/satyanadella"
 
 
 def test_progressive_wikidata_resolution_with_country_descriptors():

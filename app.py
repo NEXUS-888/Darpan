@@ -9,6 +9,7 @@ Custom cyber-biometric interface featuring:
 import os
 import sys
 import json
+import html
 import time
 import cv2
 import numpy as np
@@ -289,9 +290,59 @@ st.markdown("""
         border-radius: 4px;
         border: 1px solid rgba(0, 255, 163, 0.4);
         letter-spacing: 0.1em;
+        white-space: nowrap;
         z-index: 11;
         pointer-events: none;
         text-shadow: 0 0 8px rgba(0, 255, 163, 0.6);
+    }
+
+    /* Suppress HUD scanner overlay on small images, nested columns, and thumbnails */
+    div[data-testid="stImage"]:has(img[width="60"])::before,
+    div[data-testid="stImage"]:has(img[width="60"])::after,
+    div[data-testid="stImage"]:has(img[width="64"])::before,
+    div[data-testid="stImage"]:has(img[width="64"])::after,
+    div[data-testid="stImage"]:has(img[width="80"])::before,
+    div[data-testid="stImage"]:has(img[width="80"])::after,
+    div[data-testid="column"] div[data-testid="column"] div[data-testid="stImage"]::before,
+    div[data-testid="column"] div[data-testid="column"] div[data-testid="stImage"]::after,
+    .discovered-thumb-card::before,
+    .discovered-thumb-card::after {
+        display: none !important;
+        content: none !important;
+    }
+
+    /* Discovered Face Thumbnails Grid */
+    .discovered-thumbs-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin: 6px 0 14px 0;
+    }
+    .discovered-thumb-card {
+        display: block;
+        width: 64px;
+        height: 64px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(0, 255, 163, 0.35);
+        background: rgba(12, 18, 30, 0.8);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        flex-shrink: 0;
+        text-decoration: none !important;
+    }
+    .discovered-thumb-card:hover {
+        transform: translateY(-2px) scale(1.08);
+        border-color: #00FFA3;
+        box-shadow: 0 0 16px rgba(0, 255, 163, 0.45);
+    }
+    .discovered-thumb-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
     }
 
     /* Telemetry Metric Cards */
@@ -874,13 +925,19 @@ with tab_pipeline:
             matched_thumbs = summary.get("matched_image_urls", [])
             if matched_thumbs:
                 st.caption(f"Discovered Face Thumbnails ({len(matched_thumbs)} across engines)")
-                thumb_cols = st.columns(min(len(matched_thumbs[:4]), 4))
-                for idx, t_url in enumerate(matched_thumbs[:4]):
-                    with thumb_cols[idx]:
-                        try:
-                            st.image(t_url, width=60)
-                        except Exception:
-                            render_html('<div style="width:60px; height:60px; background: rgba(255,255,255,0.05); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #64748B;">IMG</div>')
+                thumb_cards_html = []
+                for idx, t_url in enumerate(matched_thumbs[:6]):
+                    safe_url = html.escape(t_url, quote=True)
+                    thumb_cards_html.append(
+                        f'<a href="{safe_url}" target="_blank" rel="noopener noreferrer" class="discovered-thumb-card" title="Open source image in new tab">'
+                        f'<img src="{safe_url}" class="discovered-thumb-img" alt="Discovered Face" loading="lazy" onerror="this.parentElement.style.display=\'none\';" />'
+                        f'</a>'
+                    )
+                render_html(f"""
+                <div class="discovered-thumbs-grid">
+                    {''.join(thumb_cards_html)}
+                </div>
+                """)
 
             if entity_name:
                 render_html(f"""

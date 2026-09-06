@@ -235,7 +235,9 @@ def extract_author_handle(url: str, platform: str, title: Optional[str] = None) 
         junk_path_tokens = {
             "p", "reel", "reels", "stories", "tv", "explore", "status", "user", "i",
             "watch", "shorts", "channel", "c", "feed", "share", "photo", "photos",
-            "groups", "pages", "intent", "search", "login", "story", "live", "playlist"
+            "groups", "pages", "intent", "search", "login", "story", "live", "playlist",
+            "advice", "learning", "pulse", "posts", "post", "jobs", "job", "events", "news",
+            "today", "newsletter", "newsletters", "article", "articles"
         }
 
         # Try extracting handle from title if present (e.g. "Name (@handle)")
@@ -281,8 +283,29 @@ def extract_author_handle(url: str, platform: str, title: Optional[str] = None) 
                 return f"@{cand_fb}"
             return "@facebook_user"
 
-        elif platform == "LinkedIn" and len(path) >= 2:
-            return f"in/{path[1]}" if path[0] == "in" else f"{path[0]}/{path[1]}"
+        elif platform == "LinkedIn":
+            if len(path) >= 2 and path[0] == "in":
+                cand_li = path[1].strip().lstrip("@")
+                if cand_li and cand_li.lower() not in junk_path_tokens:
+                    return f"in/{cand_li}"
+            elif len(path) >= 2 and path[0] in ("company", "school"):
+                return f"{path[0]}/{path[1]}"
+            elif len(path) >= 1 and path[0].lower() in junk_path_tokens:
+                if title:
+                    first_part = re.split(r"\s*(\||•|–|—|-|on LinkedIn)\s*", title)[0].strip()
+                    clean_li_name = extract_clean_identity_name(first_part)
+                    if clean_li_name and not is_generic_search_title(clean_li_name):
+                        slug = re.sub(r"[^a-zA-Z0-9_]", "", clean_li_name.lower())
+                        if 3 <= len(slug) <= 25:
+                            return f"@{slug}"
+                return "@linkedin_post"
+            elif len(path) >= 2:
+                if path[0].lower() not in junk_path_tokens and path[1].lower() not in junk_path_tokens:
+                    return f"{path[0]}/{path[1]}"
+                return "@linkedin_user"
+            elif len(path) == 1 and path[0].lower() not in junk_path_tokens:
+                return f"in/{path[0]}"
+            return "@linkedin_user"
 
         elif platform == "GitHub" and len(path) >= 1:
             cand_gh = path[0].lstrip("@")
@@ -311,9 +334,9 @@ def extract_author_handle(url: str, platform: str, title: Optional[str] = None) 
                 return f"@{path[-1][:20].lstrip('@')}"
             return f"@{platform.lower().replace(' ', '')}"
     except (ValueError, IndexError, AttributeError) as e:
-        print(f"[HandleExtract] Failed to parse author handle from {post_url}: {e}")
+        print(f"[HandleExtract] Failed to parse author handle from {url}: {e}")
     except Exception as e:
-        print(f"[HandleExtract] Unexpected error extracting handle from {post_url}: {e}")
+        print(f"[HandleExtract] Unexpected error extracting handle from {url}: {e}")
     return "@discovered_user"
 
 
@@ -1296,7 +1319,11 @@ class DynamicIdentityResolver(BaseSearchProvider):
             if plat:
                 thumb = discovered_images[0] if discovered_images else image_url
                 h = extract_author_handle(link, plat)
-                if h not in ("@watch", "@reel", "@reels", "@facebook_post", "@instagram_post", "@youtube_video"):
+                if (
+                    h not in ("@watch", "@reel", "@reels", "@facebook_post", "@instagram_post", "@youtube_video", "@linkedin_post", "@linkedin_article", "@x_user", "@facebook_user", "@instagram_user", "@linkedin_user", "@discovered_user")
+                    and not h.startswith("@advice")
+                    and not h.startswith("advice/")
+                ):
                     matches.append(SocialMatch(
                         platform=plat,
                         post_url=link,
@@ -1542,7 +1569,11 @@ class FederatedSearchProvider(BaseSearchProvider):
             plat = identify_social_platform(link)
             if plat:
                 h = extract_author_handle(link, plat)
-                if h not in ("@watch", "@reel", "@reels", "@facebook_post", "@instagram_post", "@youtube_video"):
+                if (
+                    h not in ("@watch", "@reel", "@reels", "@facebook_post", "@instagram_post", "@youtube_video", "@linkedin_post", "@linkedin_article", "@x_user", "@facebook_user", "@instagram_user", "@linkedin_user", "@discovered_user")
+                    and not h.startswith("@advice")
+                    and not h.startswith("advice/")
+                ):
                     matches.append(SocialMatch(
                         platform=plat,
                         post_url=link,
