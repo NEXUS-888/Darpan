@@ -1,5 +1,5 @@
 """
-Primary CLI Entrypoint for the VeriFace Protocol.
+Primary CLI Entrypoint for the DARPAN Protocol.
 Executes the end-to-end pipeline:
 Face Scan -> Social Media Search -> Blockchain Attestation -> Independent Verification
 """
@@ -11,13 +11,13 @@ from dotenv import load_dotenv
 # Ensure root workspace is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.pipeline import VeriFacePipeline
+from src.pipeline import DarpanPipeline, VeriFacePipeline
 
 
 def print_banner():
     banner = """
 ================================================================================
-          VERIFACE PROTOCOL: FACE IDENTIFICATION & BLOCKCHAIN ATTESTATION
+            DARPAN PROTOCOL: FACE IDENTIFICATION & BLOCKCHAIN ATTESTATION
               HH Goa 2026 Shortlisting Task 3 - End-to-End Pipeline
 ================================================================================
     """
@@ -76,7 +76,7 @@ def main():
         print(f"[-] Error: Input image '{args.image}' not found.")
         sys.exit(1)
 
-    print(f"[*] Initializing VeriFace Pipeline:")
+    print(f"[*] Initializing DARPAN Pipeline:")
     print(f"    - Input Image:     {args.image}")
     print(f"    - Blockchain:      {args.network.upper()} (EVM)")
     print(f"    - Search Provider: {args.provider}")
@@ -85,7 +85,7 @@ def main():
     print(f"    - Output Folder:   {args.output}")
 
     try:
-        pipeline = VeriFacePipeline(
+        pipeline = DarpanPipeline(
             network=args.network,
             search_provider=args.provider,
             api_key=args.api_key,

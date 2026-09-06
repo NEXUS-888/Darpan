@@ -1,5 +1,5 @@
 """
-Blockchain Service for the VeriFace Protocol.
+Blockchain Service for the DARPAN Protocol.
 Provides dual-engine execution:
 - Local EVM: Instant, zero-cost, zero-setup embedded Ethereum Virtual Machine (py-evm / eth-tester).
 - Remote Testnet: Base Sepolia, Polygon Amoy, or any standard EVM RPC endpoint.

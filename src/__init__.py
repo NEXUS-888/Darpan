@@ -1,1 +1,1 @@
-"""VeriFace Protocol Package."""
+"""DARPAN Protocol Package."""

@@ -1,5 +1,5 @@
 """
-Social Media and Web Reverse Search Module for the VeriFace Protocol.
+Social Media and Web Reverse Search Module for the DARPAN Protocol.
 Features genuine dynamic reverse visual search (Bing Visual Search + Serper Google Lens),
 Wikidata / Wikipedia Knowledge Graph resolution, and multi-platform social discovery.
 All results are 100% dynamically discovered with zero hardcoded mock profiles.
@@ -563,7 +563,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
     if is_generic_search_title(entity_name):
         return None, "", []
 
-    headers = {"User-Agent": "VeriFaceBot/2.0 (Biometric Verification Research)"}
+    headers = {"User-Agent": "DarpanProtocolBot/2.0 (Biometric Verification Research)"}
     matches: List[SocialMatch] = []
     now = int(time.time())
 

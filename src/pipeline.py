@@ -1,5 +1,5 @@
 """
-End-to-End Pipeline Orchestrator for the VeriFace Protocol.
+End-to-End Pipeline Orchestrator for the DARPAN Protocol.
 Executes: Face Scan Input -> Social Media Discovery -> Cryptographic Attestation -> Blockchain Upload & Verification.
 """
 import os
@@ -26,7 +26,7 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 
-class VeriFacePipeline:
+class DarpanPipeline:
     def __init__(
         self,
         network: str = "local",
@@ -167,3 +167,7 @@ class VeriFacePipeline:
 
         print(f"\n[Audit Record] Complete cryptographic receipt written to: {receipt_file}\n")
         return receipt_data
+
+
+# Backward compatibility alias
+VeriFacePipeline = DarpanPipeline

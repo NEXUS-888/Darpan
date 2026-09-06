@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="assets/banner.jpg" alt="VeriFace Protocol Banner" width="100%" style="border-radius: 10px; max-width: 900px;" />
+  <img src="assets/banner.jpg" alt="DARPAN Protocol Banner" width="100%" style="border-radius: 10px; max-width: 900px;" />
 </p>
 
-<h1 align="center">VeriFace Protocol: Biometric Attestation & Ledger Verification</h1>
+<h1 align="center">DARPAN Protocol: Biometric Attestation & Ledger Verification</h1>
 
 <p align="center">
   <em>A privacy-preserving, zero-biometric on-chain attestation engine connecting open-web facial discovery to tamper-evident EVM smart contracts.</em>
 </p>
 
 <p align="center">
-  <a href="tests/"><img src="https://img.shields.io/badge/tests-37%20passed-00FFA3?style=for-the-badge&logo=pytest&logoColor=black" alt="CI Tests" /></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/tests-40%20passed-00FFA3?style=for-the-badge&logo=pytest&logoColor=black" alt="CI Tests" /></a>
   <a href="contracts/FaceAttestationRegistry.sol"><img src="https://img.shields.io/badge/Solidity-^0.8.20-black?style=for-the-badge&logo=solidity&logoColor=white" alt="Solidity" /></a>
   <img src="https://img.shields.io/badge/EVM-Base%20Sepolia%20%7C%20Local-FFB800?style=for-the-badge&logo=ethereum&logoColor=black" alt="EVM Compatible" />
   <img src="https://img.shields.io/badge/Privacy-Zero%20On--Chain%20PII-blue?style=for-the-badge&logo=securityscorecard&logoColor=white" alt="Zero PII" />
@@ -25,7 +25,7 @@ Storing facial biometrics or personally identifiable social data on a public, im
 - **Economic Inefficiency:** Writing high-dimensional embeddings or image blobs on-chain incurs massive gas fees.
 - **Tampering Risk:** Social platforms drift, posts get edited, and metadata formatting varies across operating systems.
 
-**VeriFace Protocol ("Kannadi")** solves this by establishing a **zero-knowledge, tamper-evident commitment pipeline**. It normalizes face scans, locates associated public identities across the open web, computes deterministic cryptographic hashes, and anchors a non-invertible **32-byte commitment** on an EVM smart contract—without storing a single byte of raw biometric data on-chain.
+**DARPAN Protocol ("Darpan: The Sovereign Biometric Mirror")** solves this by establishing a **zero-knowledge, tamper-evident commitment pipeline**. It normalizes face scans, locates associated public identities across the open web, computes deterministic cryptographic hashes, and anchors a non-invertible **32-byte commitment** on an EVM smart contract—without storing a single byte of raw biometric data on-chain.
 
 ---
 
@@ -66,9 +66,9 @@ flowchart TD
 
 ---
 
-## 3. Why VeriFace? (Architecture Comparison)
+## 3. Why DARPAN? (Architecture Comparison)
 
-| Dimension | Traditional Biometric Verification | VeriFace Protocol |
+| Dimension | Traditional Biometric Verification | DARPAN Protocol |
 | :--- | :--- | :--- |
 | **On-Chain Biometric Footprint** | Raw images or 512-d float vectors (Gas heavy) | **Zero** (Only 32-byte Keccak-256 cryptographic hashes) |
 | **Privacy & GDPR Compliance** | Violates GDPR Art. 9 & 17 (Permanent immutable biometric leaks) | **100% Compliant** (Non-invertible commitments, zero PII on-chain) |
@@ -115,11 +115,11 @@ python scripts/run_pipeline.py --image samples/demo_face.jpg
 **Terminal Telemetry:**
 ```text
 ================================================================================
-          VERIFACE PROTOCOL: FACE IDENTIFICATION & BLOCKCHAIN ATTESTATION
+            DARPAN PROTOCOL: FACE IDENTIFICATION & BLOCKCHAIN ATTESTATION
               HH Goa 2026 Shortlisting Task 3 - End-to-End Pipeline
 ================================================================================
 
-[*] Initializing VeriFace Pipeline:
+[*] Initializing DARPAN Pipeline:
     - Input Image:     samples/demo_face.jpg
     - Blockchain:      LOCAL (EVM)
     - Search Provider: auto
@@ -164,7 +164,7 @@ Open **`http://localhost:8501`** in your browser.
 
 ## 6. Independent Re-Verification & Tamper Audit
 
-To prove that the blockchain record is tamper-evident, VeriFace includes an independent audit script.
+To prove that the blockchain record is tamper-evident, DARPAN includes an independent audit script.
 
 ### 6.1 Valid Attestation Verification
 Verify an untampered receipt directly against the on-chain smart contract state:
@@ -214,7 +214,7 @@ python scripts/verify_attestation.py --receipt output/attestation_receipt.json -
 
 ## 7. Automated Test Suite
 
-The repository includes a comprehensive 37-test automated verification suite covering computer vision algorithms, ArcFace biometric embeddings, RFC 8785 canonicalization, Yandex/Bing/Lens reverse-search parsers, and Solidity smart contract execution:
+The repository includes a comprehensive 40-test automated verification suite covering computer vision algorithms, ArcFace biometric embeddings, RFC 8785 canonicalization, Yandex/Bing/Lens reverse-search parsers, and Solidity smart contract execution:
 
 ```bash
 pytest -v tests/
@@ -256,10 +256,12 @@ tests/test_social_search.py::test_normalize_social_url PASSED            [ 86%]
 tests/test_search_gateway_all_engines_provider_selection PASSED          [ 89%]
 tests/test_social_search.py::test_federated_search_aggregation_and_deduplication PASSED [ 91%]
 tests/test_social_search.py::test_federated_search_local_image_does_not_double_upload PASSED [ 94%]
-tests/test_social_search.py::test_federated_search_unindexed_fallback PASSED [ 97%]
-tests/test_social_search.py::test_federated_search_with_subject_hint PASSED [100%]
+tests/test_social_search.py::test_federated_search_with_subject_hint PASSED [ 92%]
+tests/test_social_search.py::test_extract_clean_identity_name_descriptors PASSED [ 95%]
+tests/test_social_search.py::test_extract_author_handle_junk_filtering PASSED [ 97%]
+tests/test_social_search.py::test_progressive_wikidata_resolution_with_country_descriptors PASSED [100%]
 
-======================= 37 passed in 100.86s =======================
+======================= 40 passed in 145.40s =======================
 ```
 
 ---

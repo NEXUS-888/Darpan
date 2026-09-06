@@ -1,5 +1,5 @@
 """
-Face Detection and Normalization Engine for the VeriFace Protocol.
+Face Detection and Normalization Engine for the DARPAN Protocol.
 Detects faces, applies alignment & padding, extracts normalized 512x512 face crops,
 and computes cryptographic and perceptual biometrics.
 """

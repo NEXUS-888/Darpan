@@ -1,5 +1,5 @@
 """
-Independent Re-Verification Audit Script for the VeriFace Protocol.
+Independent Re-Verification Audit Script for the DARPAN Protocol.
 Demonstrates cryptographic re-verification and tamper-evidence against the on-chain record.
 """
 import os
@@ -30,8 +30,8 @@ if hasattr(sys.stdout, "reconfigure"):
 def print_banner():
     banner = """
 ================================================================================
-              VERIFACE INDEPENDENT VERIFICATION & AUDIT TOOL
-         Cryptographic Proof & Blockchain Tamper-Evidence Verifier
+                DARPAN INDEPENDENT VERIFICATION & AUDIT TOOL
+          Cryptographic Proof & Blockchain Tamper-Evidence Verifier
 ================================================================================
     """
     print(banner)

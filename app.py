@@ -1,5 +1,5 @@
 """
-Kannadi: Decentralized Biometric Mirror & Blockchain Attestation Console.
+DARPAN: Decentralized Biometric Mirror & Blockchain Attestation Console.
 Custom cyber-biometric interface featuring:
 - Obsidian Mirror & Electric Acid Mint (#00FFA3) / Solar Gold (#FFB800) contrast palette.
 - Animated HUD Biometric Laser Scanner with real-time scanline sweep across portrait viewfinders.
@@ -23,14 +23,14 @@ load_dotenv(dotenv_path=env_file if os.path.exists(env_file) else None)
 # Ensure project root in sys.path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from src.pipeline import VeriFacePipeline
+from src.pipeline import DarpanPipeline, VeriFacePipeline
 from src.face_engine import FaceEngine
 from src.hasher import compute_face_hash, compute_metadata_hash, compute_attestation_id
 from src.blockchain_service import BlockchainService
 
 # Page configuration
 st.set_page_config(
-    page_title="Kannadi // Biometric Identity Protocol",
+    page_title="DARPAN // Biometric Identity Protocol",
     page_icon="🪞",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -560,7 +560,7 @@ IDLE_STANDBY_HTML = """
 """
 
 # -----------------------------------------------------------------------------
-# TOP NAVIGATION: KANNADI CYBER-BIOMETRIC TERMINAL
+# TOP NAVIGATION: DARPAN CYBER-BIOMETRIC TERMINAL
 # -----------------------------------------------------------------------------
 render_html("""
 <div class="kannadi-header">
@@ -568,7 +568,7 @@ render_html("""
         <div class="kannadi-prism-icon">🪞</div>
         <div>
             <div class="kannadi-title-row">
-                <span class="kannadi-title">KANNADI</span>
+                <span class="kannadi-title">DARPAN</span>
                 <span class="kannadi-version-tag">BIOMETRIC IDENTITY PROTOCOL</span>
             </div>
             <p class="kannadi-subtitle">ON-CHAIN FACE VERIFICATION & IDENTITY ATTESTATION</p>
@@ -643,7 +643,7 @@ with st.sidebar:
         f"- **Standard**: `RFC 8785 Canonical JCS`\n"
         f"- **Registry**: `Solidity 0.8.20`"
     )
-    st.markdown("[View Repository on GitHub ↗](https://github.com/NEXUS-888/Kannadi.git)")
+    st.markdown("[View DARPAN on GitHub ↗](https://github.com/NEXUS-888/Kannadi.git)")
 
     if st.session_state.get("last_receipt"):
         st.markdown("---")
@@ -729,13 +729,13 @@ with tab_pipeline:
             else:
                 progress_container = st.container()
                 with progress_container:
-                    prog_bar = st.progress(0, text="Initializing Kannadi Biometric Engine...")
+                    prog_bar = st.progress(0, text="Initializing DARPAN Biometric Engine...")
                     status_placeholder = st.empty()
 
                 try:
                     prog_bar.progress(25, text="Stage 1/4: Aligning facial landmarks & generating 512×512 normalized crop...")
                     clean_serper_key = serper_key_input.strip() if (serper_key_input and serper_key_input.strip()) else ""
-                    pipeline = VeriFacePipeline(
+                    pipeline = DarpanPipeline(
                         network=network_choice,
                         search_provider=search_mode,
                         api_key=clean_serper_key,
@@ -908,7 +908,7 @@ with tab_pipeline:
                         if st.button("⚡ Attest Handle", key="inline_bind_btn", type="primary", width="stretch"):
                             if bind_input and bind_input.strip():
                                 clean_serper_key = serper_key_input.strip() if (serper_key_input and serper_key_input.strip()) else ""
-                                p_rebind = VeriFacePipeline(
+                                p_rebind = DarpanPipeline(
                                     network=network_choice,
                                     search_provider=search_mode,
                                     api_key=clean_serper_key,

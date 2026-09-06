@@ -1,9 +1,9 @@
 """
-End-to-End Integration test for the VeriFacePipeline.
+End-to-End Integration test for the DarpanPipeline.
 """
 import os
 import pytest
-from src.pipeline import VeriFacePipeline
+from src.pipeline import DarpanPipeline, VeriFacePipeline
 
 
 def test_pipeline_execution_end_to_end(tmp_path):
@@ -12,7 +12,7 @@ def test_pipeline_execution_end_to_end(tmp_path):
         pytest.skip("sample demo_face.jpg not found")
 
     out_dir = str(tmp_path / "test_out")
-    pipeline = VeriFacePipeline(
+    pipeline = DarpanPipeline(
         network="local",
         search_provider="eval",
         output_dir=out_dir,

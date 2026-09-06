@@ -1,5 +1,5 @@
 """
-Deterministic cryptographic hashing module for the VeriFace Protocol.
+Deterministic cryptographic hashing module for the DARPAN Protocol.
 Provides RFC 8785 JSON canonicalization and Keccak-256 commitments matching Solidity specs.
 """
 import json
