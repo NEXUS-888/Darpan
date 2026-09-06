@@ -125,14 +125,53 @@ def extract_clean_identity_name(raw_title: str) -> str:
     return t
 
 
-def extract_author_handle(url: str, platform: str) -> str:
+COMMERCIAL_AD_PATTERNS = [
+    r"\b(shop|buy|sale|discount|price|order|store|collection|cart|catalog|apparel|clothing|dress shirt|shirt|tie|suit|shoes|fabric|free shipping|available now|in bio|link in bio)\b",
+    r"\b(\$\d+|\d+\s*for\s*\$\d+|off\b|\d+%\s*off)\b",
+    r"\b(pinpoint|glen check|non-iron|cotton|silk|denim|polyester|tailored|formal wear)\b",
+    r"\b(the tie bar|tie bar|menswear|womenswear)\b",
+]
+
+
+def is_commercial_ad_post(title: str, snippet: str = "") -> bool:
+    text = f"{title} {snippet}".lower()
+    for pat in COMMERCIAL_AD_PATTERNS:
+        if re.search(pat, text):
+            return True
+    return False
+
+
+def extract_author_handle(url: str, platform: str, title: Optional[str] = None) -> str:
     try:
         path = [p for p in urlparse(url).path.strip("/").split("/") if p]
+
+        # Try extracting handle from title if present (e.g. "Name (@handle)")
+        if title:
+            h_match = re.search(r"@([A-Za-z0-9_.-]+)", title)
+            if h_match:
+                cand = h_match.group(1).strip()
+                if cand.lower() not in ["p", "reel", "reels", "stories", "tv", "explore", "status", "user", "i"]:
+                    return f"@{cand}"
+
         if platform == "X (Twitter)" and len(path) >= 1:
+            if path[0].lower() in ["i", "status", "intent", "search"]:
+                return "@x_user"
             return f"@{path[0].lstrip('@')}"
         elif platform == "Instagram" and len(path) >= 1:
+            # Handle post / reel URLs where path[0] is 'p' or 'reel'
+            if path[0].lower() in ["p", "reel", "reels", "stories", "tv", "explore"]:
+                if title:
+                    first_part = re.split(r"\s*(\||•|–|—|on Instagram)\s*", title)[0].strip()
+                    clean_name = extract_clean_identity_name(first_part)
+                    if clean_name and not is_generic_search_title(clean_name):
+                        slug = re.sub(r"[^a-zA-Z0-9_]", "", clean_name.lower())
+                        if slug and len(slug) >= 3:
+                            return f"@{slug}"
+                return "@instagram_post"
             return f"@{path[0].lstrip('@')}"
         elif platform == "Facebook" and len(path) >= 1:
+            if path[0].lower() in ["reel", "reels", "watch", "photo", "photos", "share", "story"]:
+                return "@facebook_post"
             return f"@{path[0].lstrip('@')}"
         elif platform == "LinkedIn" and len(path) >= 2:
             return f"in/{path[1]}" if path[0] == "in" else f"{path[0]}/{path[1]}"
@@ -571,14 +610,18 @@ class SerperProvider(BaseSearchProvider):
         # 1. Parse organic results
         for item in data.get("organic", []):
             link = item.get("link", "")
+            title = item.get("title", "")
+            snippet = item.get("snippet", "")
+            if is_commercial_ad_post(title, snippet):
+                continue
             platform = identify_social_platform(link)
             if platform:
                 matches.append(SocialMatch(
                     platform=platform,
                     post_url=link,
-                    author_handle=extract_author_handle(link, platform),
-                    post_title=item.get("title", "Discovered Social Post"),
-                    snippet=item.get("snippet", "Discovered identity post matching face scan."),
+                    author_handle=extract_author_handle(link, platform, title=title),
+                    post_title=title or "Discovered Social Post",
+                    snippet=snippet or "Discovered identity post matching face scan.",
                     matched_image_url=item.get("imageUrl", image_url),
                     discovery_timestamp=now,
                     confidence_score=0.93,
@@ -587,14 +630,18 @@ class SerperProvider(BaseSearchProvider):
         # 2. Parse visual matches
         for item in data.get("visualMatches", []):
             link = item.get("link", "")
+            title = item.get("title", "")
+            snippet = item.get("source", "")
+            if is_commercial_ad_post(title, snippet):
+                continue
             platform = identify_social_platform(link)
             if platform:
                 matches.append(SocialMatch(
                     platform=platform,
                     post_url=link,
-                    author_handle=extract_author_handle(link, platform),
-                    post_title=item.get("title", "Visual Match Social Post"),
-                    snippet=item.get("source", "Visual identity match on social media."),
+                    author_handle=extract_author_handle(link, platform, title=title),
+                    post_title=title or "Visual Match Social Post",
+                    snippet=snippet or "Visual identity match on social media.",
                     matched_image_url=item.get("thumbnail", image_url),
                     discovery_timestamp=now,
                     confidence_score=0.91,
@@ -608,6 +655,8 @@ class SerperProvider(BaseSearchProvider):
         if not candidate_name and data.get("visualMatches"):
             for vm in data.get("visualMatches", []):
                 raw_t = vm.get("title", "")
+                if is_commercial_ad_post(raw_t):
+                    continue
                 cleaned = extract_clean_identity_name(raw_t)
                 if cleaned and len(cleaned.split()) >= 2 and not is_generic_search_title(cleaned):
                     candidate_name = cleaned
@@ -626,14 +675,18 @@ class SerperProvider(BaseSearchProvider):
                             candidate_name = fb_kg.get("title")
                         for item in fb_data.get("organic", []) + fb_data.get("visualMatches", []):
                             link = item.get("link", "")
+                            title = item.get("title", "")
+                            snippet = item.get("snippet", "") or item.get("source", "")
+                            if is_commercial_ad_post(title, snippet):
+                                continue
                             plat = identify_social_platform(link)
                             if plat:
                                 matches.append(SocialMatch(
                                     platform=plat,
                                     post_url=link,
-                                    author_handle=extract_author_handle(link, plat),
-                                    post_title=item.get("title", "Visual Match Social Post"),
-                                    snippet=item.get("snippet", "Visual identity match on cropped face."),
+                                    author_handle=extract_author_handle(link, plat, title=title),
+                                    post_title=title or "Visual Match Social Post",
+                                    snippet=snippet or "Visual identity match on cropped face.",
                                     matched_image_url=crop_url,
                                     discovery_timestamp=now,
                                     confidence_score=0.92,
