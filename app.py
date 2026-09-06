@@ -14,6 +14,11 @@ import cv2
 import numpy as np
 import streamlit as st
 from PIL import Image
+from dotenv import load_dotenv
+
+# Automatically load environment variables from project .env
+env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+load_dotenv(dotenv_path=env_file if os.path.exists(env_file) else None)
 
 # Ensure project root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -263,14 +268,16 @@ with st.sidebar:
     )
     search_mode = st.selectbox(
         "Search Gateway Mode",
-        ["auto", "bing-wikidata", "serper"],
+        ["auto", "serper", "bing-wikidata"],
         index=0,
-        help="'auto' automatically runs Bing Visual Search and Wikidata Knowledge Graph, falling back to Serper Lens if configured.",
+        help="'auto' automatically runs Serper Google Lens when configured, falling back to Bing if needed.",
     )
+    env_serper_key = os.getenv("SERPER_API_KEY", "")
     serper_key_input = st.text_input(
-        "Serper API Key (Optional)",
+        "Serper API Key",
+        value=env_serper_key,
         type="password",
-        help="Paste an optional Serper.dev key for Google Lens visual matching. Free tier works out of the box with zero keys.",
+        help="Loaded automatically from .env. Used for Google Lens visual matching.",
     )
 
     st.divider()

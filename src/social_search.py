@@ -12,6 +12,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any, Tuple
 from urllib.parse import urlparse, unquote
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+# Automatically load environment variables from project .env
+env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+load_dotenv(dotenv_path=env_file if os.path.exists(env_file) else None)
 
 
 @dataclass(frozen=True)
@@ -124,22 +129,25 @@ def extract_author_handle(url: str, platform: str) -> str:
     try:
         path = [p for p in urlparse(url).path.strip("/").split("/") if p]
         if platform == "X (Twitter)" and len(path) >= 1:
-            return f"@{path[0]}"
+            return f"@{path[0].lstrip('@')}"
         elif platform == "Instagram" and len(path) >= 1:
-            return f"@{path[0]}"
+            return f"@{path[0].lstrip('@')}"
         elif platform == "Facebook" and len(path) >= 1:
-            return f"@{path[0]}"
+            return f"@{path[0].lstrip('@')}"
         elif platform == "LinkedIn" and len(path) >= 2:
             return f"in/{path[1]}" if path[0] == "in" else f"{path[0]}/{path[1]}"
         elif platform == "GitHub" and len(path) >= 1:
-            return f"@{path[0]}"
+            return f"@{path[0].lstrip('@')}"
         elif platform == "Reddit" and len(path) >= 2:
             return f"u/{path[1]}" if path[0] == "user" else f"r/{path[1]}"
         elif platform == "YouTube" and len(path) >= 1:
-            return f"@{path[0]}" if path[0].startswith("@") else f"{path[0]}/{path[1] if len(path) > 1 else ''}"
+            clean_yt = path[0].lstrip("@")
+            if path[0].startswith("@"):
+                return f"@{clean_yt}"
+            return f"{path[0]}/{path[1]}" if len(path) > 1 else f"@{clean_yt}"
         elif platform in ["TechCrunch", "Substack", "Product Hunt", "Hacker News"]:
             if len(path) >= 1:
-                return f"@{path[-1][:20]}"
+                return f"@{path[-1][:20].lstrip('@')}"
             return f"@{platform.lower().replace(' ', '')}"
     except Exception:
         pass
@@ -343,7 +351,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Official Instagram account of {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.96,
+                    confidence_score=0.97,
                 ))
             except Exception:
                 pass
@@ -394,7 +402,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Open-source developer repositories and activity for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.94,
+                    confidence_score=0.96,
                 ))
             except Exception:
                 pass
@@ -411,7 +419,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Professional network profile for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.91,
+                    confidence_score=0.95,
                 ))
             except Exception:
                 pass
@@ -428,7 +436,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
                     snippet=f"Canonical home page and web domain for {canonical_title}.",
                     matched_image_url=image_url,
                     discovery_timestamp=now,
-                    confidence_score=0.95,
+                    confidence_score=0.85,
                 ))
             except Exception:
                 pass
@@ -603,24 +611,55 @@ class SerperProvider(BaseSearchProvider):
             # If hint is a handle
             elif candidate_name.startswith("@") or (len(candidate_name.split()) == 1 and "." not in candidate_name and len(candidate_name) >= 2):
                 clean_handle = candidate_name.lstrip("@").strip()
-                existing_platforms = {m.platform for m in matches}
-                for plat, url, handle in [
-                    ("X (Twitter)", f"https://x.com/{clean_handle}", f"@{clean_handle}"),
-                    ("Instagram", f"https://www.instagram.com/{clean_handle}/", f"@{clean_handle}"),
-                    ("GitHub", f"https://github.com/{clean_handle}", f"@{clean_handle}"),
-                    ("LinkedIn", f"https://www.linkedin.com/in/{clean_handle}", f"in/{clean_handle}"),
-                ]:
-                    if plat not in existing_platforms:
-                        matches.append(SocialMatch(
-                            platform=plat,
-                            post_url=url,
-                            author_handle=handle,
-                            post_title=f"Discovered {plat} Account for @{clean_handle}",
-                            snippet=f"Public profile on {plat} corresponding to @{clean_handle}.",
-                            matched_image_url=image_url,
-                            discovery_timestamp=now,
-                            confidence_score=0.95,
-                        ))
+                handle_matches = [
+                    SocialMatch(
+                        platform="X (Twitter)",
+                        post_url=f"https://x.com/{clean_handle}",
+                        author_handle=f"@{clean_handle}",
+                        post_title=f"Discovered X (Twitter) Account for @{clean_handle}",
+                        snippet=f"Public profile on X (Twitter) corresponding to @{clean_handle}.",
+                        matched_image_url=image_url,
+                        discovery_timestamp=now,
+                        confidence_score=0.98,
+                    ),
+                    SocialMatch(
+                        platform="Instagram",
+                        post_url=f"https://www.instagram.com/{clean_handle}/",
+                        author_handle=f"@{clean_handle}",
+                        post_title=f"Discovered Instagram Account for @{clean_handle}",
+                        snippet=f"Public profile on Instagram corresponding to @{clean_handle}.",
+                        matched_image_url=image_url,
+                        discovery_timestamp=now,
+                        confidence_score=0.97,
+                    ),
+                    SocialMatch(
+                        platform="GitHub",
+                        post_url=f"https://github.com/{clean_handle}",
+                        author_handle=f"@{clean_handle}",
+                        post_title=f"Discovered GitHub Account for @{clean_handle}",
+                        snippet=f"Public repositories and activity on GitHub for @{clean_handle}.",
+                        matched_image_url=image_url,
+                        discovery_timestamp=now,
+                        confidence_score=0.96,
+                    ),
+                    SocialMatch(
+                        platform="LinkedIn",
+                        post_url=f"https://www.linkedin.com/in/{clean_handle}",
+                        author_handle=f"in/{clean_handle}",
+                        post_title=f"Discovered LinkedIn Profile for @{clean_handle}",
+                        snippet=f"Professional network profile on LinkedIn for @{clean_handle}.",
+                        matched_image_url=image_url,
+                        discovery_timestamp=now,
+                        confidence_score=0.95,
+                    ),
+                ]
+                for hm in handle_matches:
+                    existing = next((m for m in matches if m.post_url.rstrip("/").lower() == hm.post_url.rstrip("/").lower()), None)
+                    if existing:
+                        if hm.confidence_score >= existing.confidence_score:
+                            matches[matches.index(existing)] = hm
+                    else:
+                        matches.insert(0, hm)
             else:
                 # Direct Google search for tech founder / person verified socials
                 if self.api_key:
@@ -652,7 +691,11 @@ class SerperProvider(BaseSearchProvider):
                 # Optional Wikidata enrichment (for celebrities / notable figures)
                 _, _, wiki_matches = resolve_wikidata_socials(clean_res, image_url)
                 for wm in wiki_matches:
-                    if not any(m.post_url.rstrip("/") == wm.post_url.rstrip("/") for m in matches):
+                    existing = next((m for m in matches if m.post_url.rstrip("/").lower() == wm.post_url.rstrip("/").lower()), None)
+                    if existing:
+                        if wm.confidence_score > existing.confidence_score:
+                            matches[matches.index(existing)] = wm
+                    else:
                         matches.append(wm)
 
         return matches
@@ -727,16 +770,28 @@ class DynamicIdentityResolver(BaseSearchProvider):
                 ddg_matches = search_duckduckgo_socials(f'"{clean_handle}" twitter OR instagram OR linkedin OR github', image_url)
                 matches.extend(ddg_matches)
 
-                existing_platforms = {m.platform for m in matches}
                 standard_networks = [
-                    ("X (Twitter)", f"https://x.com/{clean_handle}", f"@{clean_handle}"),
-                    ("Instagram", f"https://www.instagram.com/{clean_handle}/", f"@{clean_handle}"),
-                    ("GitHub", f"https://github.com/{clean_handle}", f"@{clean_handle}"),
-                    ("LinkedIn", f"https://www.linkedin.com/in/{clean_handle}", f"in/{clean_handle}"),
+                    ("X (Twitter)", f"https://x.com/{clean_handle}", f"@{clean_handle}", 0.98),
+                    ("Instagram", f"https://www.instagram.com/{clean_handle}/", f"@{clean_handle}", 0.97),
+                    ("GitHub", f"https://github.com/{clean_handle}", f"@{clean_handle}", 0.96),
+                    ("LinkedIn", f"https://www.linkedin.com/in/{clean_handle}", f"in/{clean_handle}", 0.95),
                 ]
-                for plat, url, handle in standard_networks:
-                    if plat not in existing_platforms:
-                        matches.append(SocialMatch(
+                for plat, url, handle, conf in standard_networks:
+                    existing = next((m for m in matches if m.post_url.rstrip("/").lower() == url.rstrip("/").lower()), None)
+                    if existing:
+                        if conf >= existing.confidence_score:
+                            matches[matches.index(existing)] = SocialMatch(
+                                platform=plat,
+                                post_url=url,
+                                author_handle=handle,
+                                post_title=f"Discovered {plat} Account for @{clean_handle}",
+                                snippet=f"Public profile on {plat} corresponding to @{clean_handle}.",
+                                matched_image_url=image_url,
+                                discovery_timestamp=now,
+                                confidence_score=conf,
+                            )
+                    else:
+                        matches.insert(0, SocialMatch(
                             platform=plat,
                             post_url=url,
                             author_handle=handle,
@@ -744,7 +799,7 @@ class DynamicIdentityResolver(BaseSearchProvider):
                             snippet=f"Public profile on {plat} corresponding to @{clean_handle}.",
                             matched_image_url=image_url,
                             discovery_timestamp=now,
-                            confidence_score=0.95,
+                            confidence_score=conf,
                         ))
 
             # C) Name / query entity: clean and resolve
@@ -843,14 +898,18 @@ class SearchGateway:
             )
             detected_entity = fallback.last_detected_entity or detected_entity
 
-        # Deduplicate matches by post_url
+        # Deduplicate matches by post_url, upgrading with higher-confidence entries
         unique_matches: List[SocialMatch] = []
-        seen_urls = set()
+        seen_urls = {}
         for m in matches:
             norm_url = m.post_url.strip("/").lower()
             if norm_url not in seen_urls:
-                seen_urls.add(norm_url)
+                seen_urls[norm_url] = len(unique_matches)
                 unique_matches.append(m)
+            else:
+                idx = seen_urls[norm_url]
+                if m.confidence_score > unique_matches[idx].confidence_score:
+                    unique_matches[idx] = m
 
         # Deduplicate platforms
         unique_platforms = []
