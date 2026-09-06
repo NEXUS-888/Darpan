@@ -85,6 +85,7 @@ class DarpanPipeline:
         if search_res.entity_name:
             print(f"  [+] Identified Subject: {search_res.entity_name}")
         print(f"  [+] Discovered matches across {search_res.total_platforms} platforms: {', '.join(search_res.platforms_found)}")
+        print(f"  [+] Official Profiles: {len(search_res.official_profiles)} | Web Citations: {len(search_res.image_citations)}")
         print(f"  [+] Primary post on: {social_match.platform}")
         print(f"  [+] Author: {social_match.author_handle}")
         print(f"  [+] Post URL: {social_match.post_url}")
@@ -94,16 +95,19 @@ class DarpanPipeline:
         bio_verification = None
         target_web_photo = social_match.matched_image_url
         if target_web_photo and (target_web_photo.startswith("http") or os.path.exists(target_web_photo)):
-            print(f"\n[Biometrics] Computing ArcFace similarity against discovered web photo...")
-            try:
-                bio_sim = self.face_engine.compute_similarity(crop_path, target_web_photo)
-                social_match = social_match.with_biometric_similarity(bio_sim.score)
-                bio_verification = bio_sim.to_dict()
-                bio_verification["web_photo_url"] = target_web_photo
-                print(f"  [+] ArcFace Similarity Score: {bio_sim.score * 100:.1f}%")
-                print(f"  [+] Biometric Match Confirmed: {bio_sim.verified} (Model: {bio_sim.model_used})")
-            except Exception as e:
-                print(f"  [-] Biometric verification warning: {e}")
+            if os.path.exists(target_web_photo) and os.path.abspath(target_web_photo) == os.path.abspath(crop_path):
+                print(f"\n[Biometrics] Local crop reference match (Self-Sovereign Biometric Ledger).")
+            else:
+                print(f"\n[Biometrics] Computing ArcFace similarity against discovered web photo / official portrait...")
+                try:
+                    bio_sim = self.face_engine.compute_similarity(crop_path, target_web_photo)
+                    social_match = social_match.with_biometric_similarity(bio_sim.score)
+                    bio_verification = bio_sim.to_dict()
+                    bio_verification["web_photo_url"] = target_web_photo
+                    print(f"  [+] ArcFace Similarity Score: {bio_sim.score * 100:.1f}%")
+                    print(f"  [+] Biometric Match Confirmed: {bio_sim.verified} (Model: {bio_sim.model_used})")
+                except Exception as e:
+                    print(f"  [-] Biometric verification warning: {e}")
 
         print(f"\n[Stage 3/4] Generating cryptographic commitments (RFC 8785 canonical JSON)...")
         canonical_metadata = social_match.to_canonical_dict()

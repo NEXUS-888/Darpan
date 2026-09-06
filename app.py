@@ -58,6 +58,31 @@ def render_html(markup: str) -> None:
     st.markdown("\n".join(clean_lines), unsafe_allow_html=True)
 
 
+def get_platform_class(platform: str) -> str:
+    p = (platform or "").lower()
+    if "instagram" in p:
+        return "platform-instagram"
+    if "x" in p or "twitter" in p:
+        return "platform-x"
+    if "linkedin" in p:
+        return "platform-linkedin"
+    if "facebook" in p:
+        return "platform-facebook"
+    if "youtube" in p:
+        return "platform-youtube"
+    if "reddit" in p:
+        return "platform-reddit"
+    if "github" in p:
+        return "platform-github"
+    if "threads" in p:
+        return "platform-threads"
+    if "tiktok" in p:
+        return "platform-tiktok"
+    if "website" in p or "web" in p:
+        return "platform-website"
+    return "platform-generic"
+
+
 # -----------------------------------------------------------------------------
 # BESPOKE CYBER-BIOMETRIC DESIGN SYSTEM & ANIMATIONS
 # -----------------------------------------------------------------------------
@@ -431,6 +456,88 @@ st.markdown("""
         color: #00FFA3;
         border: 1px solid rgba(0, 255, 163, 0.35);
         box-shadow: 0 0 12px rgba(0, 255, 163, 0.2);
+    }
+    .platform-facebook {
+        background: rgba(24, 119, 242, 0.2);
+        color: #60A5FA;
+        border: 1px solid rgba(24, 119, 242, 0.4);
+        box-shadow: 0 0 12px rgba(24, 119, 242, 0.2);
+    }
+    .platform-youtube {
+        background: rgba(255, 0, 0, 0.18);
+        color: #F87171;
+        border: 1px solid rgba(255, 0, 0, 0.4);
+        box-shadow: 0 0 12px rgba(255, 0, 0, 0.2);
+    }
+    .platform-reddit {
+        background: rgba(255, 69, 0, 0.2);
+        color: #FB923C;
+        border: 1px solid rgba(255, 69, 0, 0.4);
+        box-shadow: 0 0 12px rgba(255, 69, 0, 0.2);
+    }
+    .platform-github {
+        background: rgba(255, 255, 255, 0.12);
+        color: #E2E8F0;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+    }
+    .platform-threads {
+        background: rgba(255, 255, 255, 0.12);
+        color: #F1F5F9;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+    }
+    .platform-tiktok {
+        background: rgba(0, 242, 234, 0.15);
+        color: #22D3EE;
+        border: 1px solid rgba(0, 242, 234, 0.35);
+        box-shadow: 0 0 12px rgba(0, 242, 234, 0.15);
+    }
+    .platform-website {
+        background: rgba(168, 85, 247, 0.2);
+        color: #C084FC;
+        border: 1px solid rgba(168, 85, 247, 0.4);
+        box-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
+    }
+    .citation-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 9px 12px;
+        background: rgba(8, 14, 24, 0.65);
+        border-radius: 8px;
+        margin-bottom: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        transition: border-color 0.2s;
+    }
+    .citation-card:hover {
+        border-color: rgba(0, 255, 163, 0.25);
+    }
+    .citation-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        background: rgba(148, 163, 184, 0.12);
+        color: #94A3B8;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+    .official-badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        background: rgba(0, 255, 163, 0.15);
+        color: #00FFA3;
+        border: 1px solid rgba(0, 255, 163, 0.35);
     }
 
     /* Action Link Button */
@@ -948,10 +1055,11 @@ with tab_pipeline:
                 """)
 
             if entity_name:
+                badge_text = "VERIFIED ENTITY" if summary.get("official_profiles") else "IDENTIFIED SUBJECT"
                 render_html(f"""
                 <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <span style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC; letter-spacing: -0.02em;">👤 {entity_name}</span>
-                    <span class="platform-pill platform-generic">VERIFIED ENTITY</span>
+                    <span class="platform-pill platform-generic">{badge_text}</span>
                 </div>
                 """)
 
@@ -997,32 +1105,121 @@ with tab_pipeline:
                                 st.rerun()
 
             else:
-                platform_class = "platform-instagram" if "Instagram" in post['platform'] else ("platform-x" if "X" in post['platform'] or "Twitter" in post['platform'] else "platform-linkedin")
-                render_html(f"""
-                <div style="background: rgba(12, 18, 30, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span class="platform-pill {platform_class}">🌐 {post['platform']}</span>
-                        <span class="live-node-pill" style="font-size: 0.68rem; padding: 3px 8px;">CONF: {int(post.get('confidence_score', 0.95)*100)}%</span>
-                    </div>
-                    <div style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC;">{post['author_handle']}</div>
-                    <div style="font-size: 0.84rem; color: #CBD5E1; margin: 4px 0 14px 0; font-weight: 500;">{post['post_title']}</div>
-                    <a href="{post['post_url']}" target="_blank" class="cyber-action-btn">
-                        Open Verified Profile ↗
-                    </a>
-                </div>
-                """)
+                official_profiles = summary.get("official_profiles", [])
+                image_citations = summary.get("image_citations", [])
 
-            # Additional linked platforms
-            all_m = summary.get("all_matches", [])
-            if len(all_m) > 1 and not is_unindexed:
-                st.caption("Other Discovered Profiles")
-                for m in all_m[1:4]:
+                if official_profiles:
+                    st.markdown(f"##### 🌟 Official Social Media Profiles ({len(official_profiles)})")
+                    primary_off = official_profiles[0]
+                    plat_class = get_platform_class(primary_off.get("platform", ""))
+                    safe_url = html.escape(primary_off.get("post_url", "#"), quote=True)
+                    safe_handle = html.escape(primary_off.get("author_handle", "@verified"), quote=True)
+                    safe_title = html.escape(primary_off.get("post_title", "Official Profile"), quote=True)
                     render_html(f"""
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 12px; background: rgba(3, 7, 13, 0.7); border-radius: 8px; margin-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.06);">
-                        <span style="font-size: 0.82rem; color: #E2E8F0;"><strong>{m['platform']}</strong>: {m['author_handle']}</span>
-                        <a href="{m['post_url']}" target="_blank" style="color: #00FFA3; font-size: 0.78rem; text-decoration: none; font-weight: 700;">Visit ↗</a>
+                    <div style="background: rgba(12, 18, 30, 0.85); border: 1px solid rgba(0, 255, 163, 0.35); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span class="platform-pill {plat_class}">🌐 {primary_off['platform']}</span>
+                            <span class="official-badge-pill">OFFICIAL PROFILE ✓</span>
+                        </div>
+                        <div style="font-size: 1.15rem; font-weight: 800; color: #F8FAFC;">{safe_handle}</div>
+                        <div style="font-size: 0.84rem; color: #CBD5E1; margin: 4px 0 14px 0; font-weight: 500;">{safe_title}</div>
+                        <a href="{safe_url}" target="_blank" class="cyber-action-btn">
+                            Open Official Profile ↗
+                        </a>
                     </div>
                     """)
+
+                    if len(official_profiles) > 1:
+                        st.caption("Additional Verified Accounts")
+                        for m in official_profiles[1:]:
+                            plat_c = get_platform_class(m.get("platform", ""))
+                            safe_u = html.escape(m.get("post_url", "#"), quote=True)
+                            safe_h = html.escape(m.get("author_handle", "@profile"), quote=True)
+                            render_html(f"""
+                            <div class="citation-card">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span class="platform-pill {plat_c}" style="padding: 2px 8px; font-size: 0.72rem;">{m['platform']}</span>
+                                    <span style="font-size: 0.84rem; font-weight: 700; color: #F1F5F9;">{safe_h}</span>
+                                </div>
+                                <a href="{safe_u}" target="_blank" style="color: #00FFA3; font-size: 0.78rem; text-decoration: none; font-weight: 700;">Visit ↗</a>
+                            </div>
+                            """)
+                else:
+                    if image_citations:
+                        primary_cit = image_citations[0]
+                        plat_class = get_platform_class(primary_cit.get("platform", ""))
+                        safe_url = html.escape(primary_cit.get("post_url", "#"), quote=True)
+                        safe_handle = html.escape(primary_cit.get("author_handle", "@discovered"), quote=True)
+                        raw_title = primary_cit.get("post_title", "Discovered Web Match")
+                        safe_title = html.escape(raw_title, quote=True)
+                        safe_snippet = html.escape(primary_cit.get("snippet", "")[:140], quote=True)
+                        render_html(f"""
+                        <div style="background: rgba(12, 18, 30, 0.85); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span class="platform-pill {plat_class}">🌐 {primary_cit['platform']}</span>
+                                <span class="platform-pill platform-generic" style="color: #00E5FF; border-color: rgba(0, 229, 255, 0.4); background: rgba(0, 229, 255, 0.1);">PRIMARY WEB MATCH ✓</span>
+                            </div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #F8FAFC;">{safe_handle}</div>
+                            <div style="font-size: 0.84rem; color: #E2E8F0; margin: 4px 0 6px 0; font-weight: 600;">{safe_title}</div>
+                            <div style="font-size: 0.78rem; color: #94A3B8; margin-bottom: 12px; line-height: 1.4;">{safe_snippet}</div>
+                            <a href="{safe_url}" target="_blank" class="cyber-action-btn" style="background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%);">
+                                Open Discovered Post / Source ↗
+                            </a>
+                        </div>
+                        """)
+                    else:
+                        render_html(f"""
+                        <div style="background: rgba(12, 18, 30, 0.6); border: 1px dashed rgba(255, 255, 255, 0.18); border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                <span class="platform-pill platform-generic" style="font-size: 0.70rem;">WEB OCCURRENCE</span>
+                                <span style="font-size: 0.82rem; font-weight: 700; color: #94A3B8;">No Official Verified Handle Indexed</span>
+                            </div>
+                            <div style="font-size: 0.80rem; color: #CBD5E1; line-height: 1.4;">
+                                Discovered image matches across social media and web pages are listed below under <strong>Where This Image Was Found Online</strong>.
+                            </div>
+                        </div>
+                        """)
+
+                # Display image citations (where the image was used/found online)
+                citations_to_show = image_citations[1:] if (not official_profiles and len(image_citations) > 1) else image_citations
+                if citations_to_show:
+                    render_html("<div style='margin-top: 14px;'></div>")
+                    st.markdown(f"##### 🌐 Where This Image Was Found Online ({len(image_citations)} Citations)")
+                    st.caption("Articles, fan pages, and social media posts citing or sharing this photo:")
+                    for cit in citations_to_show[:6]:
+                        plat_c = get_platform_class(cit.get("platform", ""))
+                        safe_u = html.escape(cit.get("post_url", "#"), quote=True)
+                        safe_h = html.escape(cit.get("author_handle", ""), quote=True)
+                        raw_title = cit.get("post_title", "Web Citation")
+                        safe_t = html.escape(raw_title[:45] + "..." if len(raw_title) > 45 else raw_title, quote=True)
+                        label_text = f"{safe_h} · {safe_t}" if safe_h and not safe_h.startswith("@discovered") else safe_t
+                        render_html(f"""
+                        <div class="citation-card">
+                            <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">
+                                <span class="platform-pill {plat_c}" style="padding: 2px 7px; font-size: 0.70rem;">{cit['platform']}</span>
+                                <span style="font-size: 0.80rem; color: #E2E8F0;" title="{html.escape(cit.get('post_title',''), quote=True)}">{label_text}</span>
+                            </div>
+                            <a href="{safe_u}" target="_blank" style="color: #00E5FF; font-size: 0.78rem; text-decoration: none; font-weight: 700; flex-shrink: 0;">Source ↗</a>
+                        </div>
+                        """)
+                    if len(image_citations) > 6:
+                        with st.expander(f"View All {len(image_citations)} Citations ({len(image_citations) - 6} More)"):
+                            for cit in image_citations[6:]:
+                                plat_c = get_platform_class(cit.get("platform", ""))
+                                safe_u = html.escape(cit.get("post_url", "#"), quote=True)
+                                safe_h = html.escape(cit.get("author_handle", ""), quote=True)
+                                raw_title = cit.get("post_title", "Web Citation")
+                                safe_t = html.escape(raw_title[:45] + "..." if len(raw_title) > 45 else raw_title, quote=True)
+                                label_text = f"{safe_h} · {safe_t}" if safe_h and not safe_h.startswith("@discovered") else safe_t
+                                render_html(f"""
+                                <div class="citation-card">
+                                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">
+                                        <span class="platform-pill {plat_c}" style="padding: 2px 7px; font-size: 0.70rem;">{cit['platform']}</span>
+                                        <span style="font-size: 0.80rem; color: #E2E8F0;" title="{html.escape(cit.get('post_title',''), quote=True)}">{label_text}</span>
+                                    </div>
+                                    <a href="{safe_u}" target="_blank" style="color: #00E5FF; font-size: 0.78rem; text-decoration: none; font-weight: 700; flex-shrink: 0;">Source ↗</a>
+                                </div>
+                                """)
 
             st.caption("Canonical Metadata Hash (RFC 8785)")
             render_html(f'<span class="cyber-hash-pill">{rc["cryptography"]["metadata_hash"]}</span>')
