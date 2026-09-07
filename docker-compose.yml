@@ -1,9 +1,9 @@
 services:
-  kannadi-app:
+  darpan-app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: kannadi-app
+    container_name: darpan-app
     restart: unless-stopped
     ports:
       - "8501:8501"
@@ -27,4 +27,4 @@ services:
 
 volumes:
   insightface_models:
-    name: kannadi_insightface_models
+    name: darpan_insightface_models

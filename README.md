@@ -85,8 +85,8 @@ flowchart TD
 Run anywhere with zero local dependency installation (no Python, OpenCV, or compilation tools required on host):
 ```bash
 # 1. Clone repository
-git clone https://github.com/NEXUS-888/Kannadi.git
-cd Kannadi
+git clone https://github.com/NEXUS-888/Darpan.git
+cd Darpan
 
 # 2. Launch containerized stack
 docker compose up --build
@@ -97,8 +97,8 @@ docker compose up --build
 
 ### Option B: 1-Click Native Launcher (macOS & Linux)
 ```bash
-git clone https://github.com/NEXUS-888/Kannadi.git
-cd Kannadi
+git clone https://github.com/NEXUS-888/Darpan.git
+cd Darpan
 
 # Automatically detects Python, sets up virtualenv, installs dependencies, & launches UI
 chmod +x run.sh
@@ -110,8 +110,8 @@ chmod +x run.sh
 ### Option C: 1-Click Native Launcher (Windows)
 Double-click `run.bat` in File Explorer, or run in Command Prompt / PowerShell:
 ```cmd
-git clone https://github.com/NEXUS-888/Kannadi.git
-cd Kannadi
+git clone https://github.com/NEXUS-888/Darpan.git
+cd Darpan
 run.bat
 ```
 

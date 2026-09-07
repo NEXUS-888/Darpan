@@ -764,7 +764,7 @@ def resolve_wikidata_socials(entity_name: str, image_url: str) -> Tuple[Optional
         if c_title:
             return c_title, c_snip, c_matches
 
-    headers = {"User-Agent": "DarpanResearchBot/2.1 (https://github.com/NEXUS-888/Kannadi; bot@darpan.org)"}
+    headers = {"User-Agent": "DarpanResearchBot/2.1 (https://github.com/NEXUS-888/Darpan; bot@darpan.org)"}
     matches: List[SocialMatch] = []
     now = int(time.time())
 
@@ -1822,7 +1822,7 @@ class YandexProvider(BaseSearchProvider):
         if not matches:
             matches.append(SocialMatch(
                 platform="Biometric Identity Ledger",
-                post_url="https://github.com/NEXUS-888/Kannadi#biometric-identity-ledger",
+                post_url="https://github.com/NEXUS-888/Darpan#biometric-identity-ledger",
                 author_handle=f"@biometric_{hex(abs(hash(image_path_or_url)))[2:10]}",
                 post_title="Biometric Face Attestation Record",
                 snippet="Biometric face scan verified and cryptographically signed. Subject identity is private / unindexed on public search engines.",
@@ -2020,7 +2020,7 @@ class DynamicIdentityResolver(BaseSearchProvider):
             short_id = hex(abs(hash(image_path_or_url)))[2:10]
             matches.append(SocialMatch(
                 platform="Biometric Identity Ledger",
-                post_url="https://github.com/NEXUS-888/Kannadi#sovereign-biometrics",
+                post_url="https://github.com/NEXUS-888/Darpan#sovereign-biometrics",
                 author_handle=f"@sovereign_{short_id}",
                 post_title="Private Biometric Identity Voucher",
                 snippet="Biometric face scan verified and cryptographically signed. Subject identity is private / unindexed on public search engines.",
@@ -2376,7 +2376,7 @@ class FederatedSearchProvider(BaseSearchProvider):
             short_id = hex(abs(hash(image_path_or_url)))[2:10]
             matches.append(SocialMatch(
                 platform="Biometric Identity Ledger",
-                post_url="https://github.com/NEXUS-888/Kannadi#sovereign-biometrics",
+                post_url="https://github.com/NEXUS-888/Darpan#sovereign-biometrics",
                 author_handle=f"@sovereign_{short_id}",
                 post_title="Private Biometric Identity Voucher",
                 snippet="Biometric face scan verified and cryptographically signed. Subject identity is private / unindexed on public search engines.",

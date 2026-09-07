@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
-title Kannadi - Biometric Face Identification & Attestation Gateway
+title DARPAN - Biometric Face Identification & Attestation Gateway
 
 echo ==========================================================
-echo   🚀 Starting Kannadi (DARPAN Protocol)
+echo   🚀 Starting DARPAN Protocol
 echo   Biometric Face Identification ^& Attestation Gateway
 echo ==========================================================
 

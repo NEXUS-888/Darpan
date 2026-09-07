@@ -1,5 +1,5 @@
 """
-Cross-Platform Environment & Portability Diagnostic Suite for Kannadi.
+Cross-Platform Environment & Portability Diagnostic Suite for DARPAN Protocol.
 Verifies system compatibility, dependencies, CV libraries, biometrics,
 blockchain EVM runtime, web discovery connectivity, and filesystem access.
 """
@@ -36,7 +36,7 @@ INFO_SYM = f"{CYAN}[INFO]{RESET}"
 
 def print_banner():
     print(f"\n{BOLD}{CYAN}================================================================={RESET}")
-    print(f"{BOLD}{CYAN}   [>] Kannadi / DARPAN Protocol - Cross-Platform Diagnostics{RESET}")
+    print(f"{BOLD}{CYAN}   [>] DARPAN Protocol - Cross-Platform Diagnostics{RESET}")
     print(f"{BOLD}{CYAN}================================================================={RESET}\n")
 
 def check_python():
@@ -188,7 +188,7 @@ def check_web_discovery():
         r = requests.get(
             "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=Albert+Einstein&language=en&format=json",
             timeout=5,
-            headers={"User-Agent": "KannadiEnvironmentCheck/1.0"}
+            headers={"User-Agent": "DarpanEnvironmentCheck/1.0"}
         )
         if r.status_code == 200 and "search" in r.json():
             print(f"  {PASS_SYM} Wikidata Entity & Social API connected")
@@ -216,7 +216,7 @@ def check_filesystem_and_storage():
         os.makedirs(output_dir, exist_ok=True)
         test_file = os.path.join(output_dir, ".perm_test.tmp")
         with open(test_file, "w") as f:
-            f.write("kannadi_test")
+            f.write("darpan_test")
         os.remove(test_file)
         print(f"  {PASS_SYM} Local output/ directory is writable ({output_dir})")
     except Exception as e:
@@ -263,7 +263,7 @@ def main():
     print(f"\n{BOLD}{CYAN}================================================================={RESET}")
     print(f"{BOLD}Diagnostic Summary: {passed}/{total} checks passed{RESET}")
     if failed == 0:
-        print(f"{GREEN}{BOLD}>>> System is fully compatible and ready to run Kannadi!{RESET}")
+        print(f"{GREEN}{BOLD}>>> System is fully compatible and ready to run DARPAN!{RESET}")
         print(f"   Launch via: streamlit run app.py  (or docker compose up --build)")
     else:
         print(f"{RED}{BOLD}XXX {failed} check(s) failed. Please resolve the errors above.{RESET}")

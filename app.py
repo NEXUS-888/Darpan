@@ -842,7 +842,7 @@ with st.sidebar:
         f"- **Standard**: `RFC 8785 Canonical JCS`\n"
         f"- **Registry**: `Solidity 0.8.20`"
     )
-    st.markdown("[View DARPAN on GitHub ↗](https://github.com/NEXUS-888/Kannadi.git)")
+    st.markdown("[View DARPAN on GitHub ↗](https://github.com/NEXUS-888/Darpan.git)")
 
     if st.session_state.get("last_receipt"):
         st.markdown("---")

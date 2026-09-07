@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Kannadi / DARPAN Protocol - 1-Click Native Runner (Linux / macOS)
+# DARPAN Protocol - 1-Click Native Runner (Linux / macOS)
 # =============================================================================
 set -e
 
 echo "=========================================================="
-echo "  🚀 Starting Kannadi (DARPAN Protocol)"
+echo "  🚀 Starting DARPAN Protocol"
 echo "  Biometric Face Identification & Attestation Gateway"
 echo "=========================================================="
 
