@@ -686,6 +686,12 @@ st.markdown("""
     /* Streamlit overrides */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    [data-testid="stToast"], [data-testid="stNotification"], div[data-testid="stToastContainer"], div[class*="stToast"], div:has(> div:has-text("Help agents write better apps")) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -696,9 +702,34 @@ SCANNER_STANDBY_HTML = """
 <div class="scanner-corner corner-bl"></div>
 <div class="scanner-corner corner-br"></div>
 <div class="scanner-beam"></div>
-<div style="font-size: 3rem; margin-bottom: 8px; filter: drop-shadow(0 0 16px rgba(0, 255, 163, 0.5));">👤</div>
+<svg width="68" height="68" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(0, 255, 163, 0.55));">
+  <circle cx="32" cy="32" r="28" stroke="#00FFA3" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
+  <circle cx="32" cy="32" r="20" stroke="#00FFA3" stroke-width="1" opacity="0.25"/>
+  <path d="M32 6V14M32 50V58M6 32H14M50 32H58" stroke="#00FFA3" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="32" cy="26" r="7" stroke="#00FFA3" stroke-width="1.5"/>
+  <path d="M21 44C21 38 26 36 32 36C38 36 43 38 43 44" stroke="#00FFA3" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
 <div class="scanner-caption-pill">BIO-VIEWFINDER // STANDBY</div>
-<div class="scanner-sub-caption">Awaiting Portrait Input</div>
+<div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem; font-weight: 700; color: #F8FAFC; margin-top: 8px; letter-spacing: 0.02em;">
+  Upload to Scan Target
+</div>
+<div class="scanner-sub-caption">Upload a portrait photo above to acquire target</div>
+</div>
+"""
+
+SCANNER_WEBCAM_STANDBY_HTML = """
+<div class="generic-scanner-card">
+<div class="scanner-corner corner-tl"></div>
+<div class="scanner-corner corner-tr"></div>
+<div class="scanner-corner corner-bl"></div>
+<div class="scanner-corner corner-br"></div>
+<div class="scanner-beam"></div>
+<div style="font-size: 2.8rem; margin-bottom: 6px; filter: drop-shadow(0 0 16px rgba(0, 255, 163, 0.5));">📷</div>
+<div class="scanner-caption-pill">WEBCAM // STANDBY</div>
+<div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem; font-weight: 700; color: #F8FAFC; margin-top: 8px; letter-spacing: 0.02em;">
+  Capture to Scan Target
+</div>
+<div class="scanner-sub-caption">Take a photo above to acquire target</div>
 </div>
 """
 
@@ -850,26 +881,25 @@ with tab_pipeline:
                 type=["jpg", "jpeg", "png"],
                 label_visibility="collapsed"
             )
-            if uploaded_file:
+            if uploaded_file is not None:
                 temp_up = "output/uploaded_face.jpg"
                 with open(temp_up, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 image_path = temp_up
-                st.image(image_path, caption="Ingested Face Portrait", width=280)
-            elif os.path.exists("output/uploaded_face.jpg"):
-                image_path = "output/uploaded_face.jpg"
-                st.image(image_path, caption="Current Ingested Portrait", width=280)
+                st.image(image_path, caption="Target Acquired: Ready for Attestation", width=280)
             else:
                 render_html(SCANNER_STANDBY_HTML)
 
         elif input_mode == "📸 Live Camera":
             cam_picture = st.camera_input("Capture selfie from webcam")
-            if cam_picture:
+            if cam_picture is not None:
                 temp_cam = "output/webcam_face.jpg"
                 with open(temp_cam, "wb") as f:
                     f.write(cam_picture.getbuffer())
                 image_path = temp_cam
-                st.image(image_path, caption="Live Webcam Capture", width=280)
+                st.image(image_path, caption="Live Webcam Capture: Target Acquired", width=280)
+            else:
+                render_html(SCANNER_WEBCAM_STANDBY_HTML)
 
         else:
             sample_file = "samples/demo_face.jpg"
@@ -893,7 +923,7 @@ with tab_pipeline:
 
         if run_btn:
             if not image_path or not os.path.exists(image_path):
-                st.error("Please provide or capture a face image first.")
+                st.warning("⚠️ No biometric target acquired. Please upload a portrait photo or select an evaluation sample first.")
             else:
                 progress_container = st.container()
                 with progress_container:
@@ -1355,6 +1385,14 @@ with tab_verify:
                         </div>
                     </div>
                     """)
+                    st.download_button(
+                        "⬇ Download Cryptographic Receipt (JSON)",
+                        data=json.dumps(rc, indent=2),
+                        file_name="darpan_attestation_receipt.json",
+                        mime="application/json",
+                        key="tab2_download_receipt_btn",
+                        width="stretch"
+                    )
                 else:
                     render_html(f"""
                     <div style="background: linear-gradient(135deg, rgba(60, 10, 20, 0.85) 0%, rgba(30, 5, 10, 0.95) 100%); border: 1px solid #FF2A55; border-radius: 14px; padding: 20px; box-shadow: 0 0 30px rgba(255, 42, 85, 0.35);">
