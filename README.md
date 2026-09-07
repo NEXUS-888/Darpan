@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="tests/"><img src="https://img.shields.io/badge/tests-40%20passed-00FFA3?style=for-the-badge&logo=pytest&logoColor=black" alt="CI Tests" /></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/tests-69%20passed-00FFA3?style=for-the-badge&logo=pytest&logoColor=black" alt="CI Tests" /></a>
   <a href="contracts/FaceAttestationRegistry.sol"><img src="https://img.shields.io/badge/Solidity-^0.8.20-black?style=for-the-badge&logo=solidity&logoColor=white" alt="Solidity" /></a>
   <img src="https://img.shields.io/badge/EVM-Base%20Sepolia%20%7C%20Local-FFB800?style=for-the-badge&logo=ethereum&logoColor=black" alt="EVM Compatible" />
   <img src="https://img.shields.io/badge/Privacy-Zero%20On--Chain%20PII-blue?style=for-the-badge&logo=securityscorecard&logoColor=white" alt="Zero PII" />
@@ -37,7 +37,7 @@ The pipeline moves deterministically through 5 stages, from raw pixels to crypto
 flowchart TD
     S1["<b>Stage 1: Biometric Computer Vision</b><br/>• 📷 Raw Portrait Face Ingestion<br/>• OpenCV Haar Cascade Landmark Alignment (512×512)<br/>• ArcFace Feature Extraction & Biometric Embeddings<br/>• Keccak-256 Non-Invertible Face Hash (bytes32)"]
     
-    S2["<b>Stage 2: Federated Multi-Engine OSINT</b><br/>• Search Gateway (all-engines federated mode)<br/>• Yandex Visual Search + Bing Visual + Google Lens<br/>• Wikidata Knowledge Graph Entity Resolution<br/>• Aggregated Social Identity Graph (X, LinkedIn, IG)"]
+    S2["<b>Stage 2: Federated Multi-Engine OSINT & Portrait Gate</b><br/>• Search Gateway (all-engines federated mode)<br/>• Yandex Visual Search + Bing Visual + Google Lens<br/>• ArcFace Biometric Candidate Verification Gate (P18)<br/>• Direct Web Citations (Reddit, TikTok, IG) & Wikidata Graph"]
     
     S3["<b>Stage 3: Canonical Cryptography</b><br/>• RFC 8785 JSON Canonicalization Scheme (JCS)<br/>• Deterministic Canonical Metadata Hash (bytes32)<br/>• Commitment Attestation ID = keccak256(faceHash || metaHash)"]
     
@@ -74,6 +74,7 @@ flowchart TD
 | **Privacy & GDPR Compliance** | Violates GDPR Art. 9 & 17 (Permanent immutable biometric leaks) | **100% Compliant** (Non-invertible commitments, zero PII on-chain) |
 | **Metadata Reproducibility** | Non-deterministic JSON serialization (key-order drift) | **Strict RFC 8785 JSON Canonicalization Scheme (JCS)** |
 | **Blockchain Execution** | Requires paid gas faucets, seed phrases, and external wallets | **Dual Mode**: Zero-friction embedded `py-evm` + Base Sepolia |
+| **Identity Resolution & OSINT** | Blind text scraping binds wrong celebrities / stadiums | **P18 Biometric Portrait Gate + Possessive Attribution + Web Citation Fallback** |
 | **Tamper Detection** | Post-hoc manual inspection | **Cryptographically enforced at smart contract layer** |
 
 ---
@@ -245,54 +246,84 @@ python scripts/verify_attestation.py --receipt output/attestation_receipt.json -
 
 ## 7. Automated Test Suite
 
-The repository includes a comprehensive 40-test automated verification suite covering computer vision algorithms, ArcFace biometric embeddings, RFC 8785 canonicalization, Yandex/Bing/Lens reverse-search parsers, and Solidity smart contract execution:
+The repository includes a comprehensive 69-test automated verification suite covering computer vision algorithms, ArcFace biometric embeddings, RFC 8785 canonicalization, federated Yandex/Bing/Lens reverse-search parsers, cross-platform portability, and Solidity smart contract execution:
 
 ```bash
 pytest -v tests/
 ```
 
 ```text
-tests/test_blockchain.py::test_contract_deployment PASSED                [  2%]
-tests/test_blockchain.py::test_record_and_verify_attestation PASSED      [  5%]
-tests/test_blockchain.py::test_duplicate_attestation_prevention PASSED   [  8%]
-tests/test_face_engine.py::test_face_engine_initialization PASSED        [ 10%]
-tests/test_face_engine.py::test_face_engine_processing PASSED            [ 13%]
-tests/test_face_engine.py::test_face_engine_synthetic_fallback PASSED    [ 16%]
-tests/test_face_engine.py::test_face_engine_extract_embedding PASSED     [ 18%]
-tests/test_face_engine.py::test_face_engine_similarity_self_match PASSED [ 21%]
-tests/test_face_engine.py::test_face_engine_similarity_discrimination PASSED [ 24%]
-tests/test_face_engine.py::test_face_engine_input_types PASSED           [ 27%]
-tests/test_face_engine.py::test_face_engine_invalid_input_graceful_handling PASSED [ 29%]
-tests/test_hasher.py::test_canonicalize_json_key_order PASSED            [ 32%]
-tests/test_hasher.py::test_compute_keccak256 PASSED                      [ 35%]
-tests/test_hasher.py::test_compute_metadata_hash_deterministic PASSED    [ 37%]
-tests/test_hasher.py::test_compute_attestation_id_valid PASSED           [ 40%]
-tests/test_hasher.py::test_compute_attestation_id_invalid_length PASSED  [ 43%]
-tests/test_pipeline.py::test_pipeline_execution_end_to_end PASSED        [ 45%]
-tests/test_pipeline.py::test_pipeline_execution_all_engines PASSED       [ 48%]
-tests/test_social_search.py::test_identify_social_platform PASSED        [ 51%]
-tests/test_social_search.py::test_extract_author_handle PASSED           [ 54%]
-tests/test_social_search.py::test_wikidata_resolution_ronaldo PASSED     [ 56%]
-tests/test_social_search.py::test_search_gateway_dynamic_ronaldo PASSED  [ 59%]
-tests/test_social_search.py::test_search_gateway_unindexed_private_face PASSED [ 62%]
-tests/test_social_search.py::test_search_gateway_url_hint PASSED         [ 64%]
-tests/test_social_search.py::test_search_gateway_handle_hint PASSED      [ 67%]
-tests/test_social_search.py::test_extract_clean_identity_name_founders PASSED [ 70%]
-tests/test_social_search.py::test_identify_tech_platforms PASSED         [ 72%]
-tests/test_social_search.py::test_yandex_reverse_visual_search_parsing PASSED [ 75%]
-tests/test_social_search.py::test_yandex_reverse_visual_search_error_handling PASSED [ 78%]
-tests/test_social_search.py::test_yandex_provider_and_gateway PASSED     [ 81%]
-tests/test_social_search.py::test_social_match_biometric_similarity PASSED [ 83%]
-tests/test_social_search.py::test_normalize_social_url PASSED            [ 86%]
-tests/test_search_gateway_all_engines_provider_selection PASSED          [ 89%]
-tests/test_social_search.py::test_federated_search_aggregation_and_deduplication PASSED [ 91%]
-tests/test_social_search.py::test_federated_search_local_image_does_not_double_upload PASSED [ 94%]
-tests/test_social_search.py::test_federated_search_with_subject_hint PASSED [ 92%]
-tests/test_social_search.py::test_extract_clean_identity_name_descriptors PASSED [ 95%]
-tests/test_social_search.py::test_extract_author_handle_junk_filtering PASSED [ 97%]
-tests/test_social_search.py::test_progressive_wikidata_resolution_with_country_descriptors PASSED [100%]
+tests/test_blockchain.py::test_contract_deployment PASSED                [  1%]
+tests/test_blockchain.py::test_record_and_verify_attestation PASSED      [  2%]
+tests/test_blockchain.py::test_duplicate_attestation_prevention PASSED   [  4%]
+tests/test_environment_portability.py::test_precompiled_contract_artifact_portability PASSED [  5%]
+tests/test_environment_portability.py::test_keccak256_architecture_independence PASSED [  7%]
+tests/test_environment_portability.py::test_face_engine_cross_platform_fallback PASSED [  8%]
+tests/test_environment_portability.py::test_docker_and_launcher_specifications PASSED [ 10%]
+tests/test_environment_portability.py::test_verify_environment_script_execution PASSED [ 11%]
+tests/test_face_engine.py::test_face_engine_initialization PASSED        [ 13%]
+tests/test_face_engine.py::test_face_engine_processing PASSED            [ 14%]
+tests/test_face_engine.py::test_face_engine_synthetic_fallback PASSED    [ 15%]
+tests/test_face_engine.py::test_face_engine_extract_embedding PASSED     [ 17%]
+tests/test_face_engine.py::test_face_engine_similarity_self_match PASSED [ 18%]
+tests/test_face_engine.py::test_face_engine_similarity_discrimination PASSED [ 20%]
+tests/test_face_engine.py::test_face_engine_input_types PASSED           [ 21%]
+tests/test_face_engine.py::test_face_engine_invalid_input_graceful_handling PASSED [ 23%]
+tests/test_face_engine.py::test_face_engine_insightface_attributes PASSED [ 24%]
+tests/test_face_engine.py::test_face_engine_rgba_conversion PASSED       [ 26%]
+tests/test_face_engine.py::test_face_engine_exif_orientation_handling PASSED [ 27%]
+tests/test_face_engine.py::test_face_engine_prefer_insightface_flag PASSED [ 28%]
+tests/test_face_engine.py::test_face_engine_cmyk_and_palette_handling PASSED [ 30%]
+tests/test_face_engine.py::test_face_engine_align_face_5point_degenerate PASSED [ 31%]
+tests/test_hasher.py::test_canonicalize_json_key_order PASSED            [ 33%]
+tests/test_hasher.py::test_compute_keccak256 PASSED                      [ 34%]
+tests/test_hasher.py::test_compute_metadata_hash_deterministic PASSED    [ 36%]
+tests/test_hasher.py::test_compute_attestation_id_valid PASSED           [ 37%]
+tests/test_hasher.py::test_compute_attestation_id_invalid_length PASSED  [ 39%]
+tests/test_pipeline.py::test_pipeline_execution_end_to_end PASSED        [ 40%]
+tests/test_pipeline.py::test_pipeline_execution_all_engines PASSED       [ 42%]
+tests/test_pipeline.py::test_pipeline_execution_with_virat_kohli_hint PASSED [ 43%]
+tests/test_social_search.py::test_identify_social_platform PASSED        [ 44%]
+tests/test_social_search.py::test_extract_author_handle PASSED           [ 46%]
+tests/test_social_search.py::test_wikidata_resolution_ronaldo PASSED     [ 47%]
+tests/test_social_search.py::test_search_gateway_dynamic_ronaldo PASSED  [ 49%]
+tests/test_social_search.py::test_search_gateway_unindexed_private_face PASSED [ 50%]
+tests/test_social_search.py::test_search_gateway_url_hint PASSED         [ 52%]
+tests/test_social_search.py::test_search_gateway_handle_hint PASSED      [ 53%]
+tests/test_social_search.py::test_extract_clean_identity_name_founders PASSED [ 55%]
+tests/test_social_search.py::test_identify_tech_platforms PASSED         [ 56%]
+tests/test_social_search.py::test_yandex_reverse_visual_search_parsing PASSED [ 57%]
+tests/test_social_search.py::test_yandex_reverse_visual_search_error_handling PASSED [ 59%]
+tests/test_social_search.py::test_yandex_provider_and_gateway PASSED     [ 60%]
+tests/test_social_search.py::test_social_match_biometric_similarity PASSED [ 62%]
+tests/test_social_search.py::test_normalize_social_url PASSED            [ 63%]
+tests/test_search_gateway_all_engines_provider_selection PASSED          [ 65%]
+tests/test_social_search.py::test_federated_search_aggregation_and_deduplication PASSED [ 66%]
+tests/test_social_search.py::test_federated_search_local_image_does_not_double_upload PASSED [ 68%]
+tests/test_social_search.py::test_federated_search_unindexed_fallback PASSED [ 69%]
+tests/test_social_search.py::test_federated_search_with_subject_hint PASSED [ 71%]
+tests/test_social_search.py::test_extract_clean_identity_name_descriptors PASSED [ 72%]
+tests/test_social_search.py::test_extract_author_handle_junk_filtering PASSED [ 73%]
+tests/test_social_search.py::test_progressive_wikidata_resolution_with_country_descriptors PASSED [ 75%]
+tests/test_social_search.py::test_is_event_or_non_human_entity PASSED    [ 76%]
+tests/test_social_search.py::test_extract_clean_identity_name_event_stripping PASSED [ 78%]
+tests/test_social_search.py::test_wikidata_resolution_virat_kohli PASSED [ 79%]
+tests/test_social_search.py::test_is_official_profile_match PASSED       [ 81%]
+tests/test_social_search.py::test_candidate_extraction_from_results PASSED [ 82%]
+tests/test_social_search.py::test_search_gateway_separates_official_and_citations PASSED [ 84%]
+tests/test_social_search.py::test_is_event_or_non_human_entity_known_phrases PASSED [ 85%]
+tests/test_social_search.py::test_candidate_extraction_from_long_sentence_titles PASSED [ 86%]
+tests/test_social_search.py::test_extract_clean_identity_name_year_boundary PASSED [ 88%]
+tests/test_social_search.py::test_search_duckduckgo_socials_b_param PASSED [ 89%]
+tests/test_social_search.py::test_is_event_or_non_human_entity_sports_teams PASSED [ 91%]
+tests/test_social_search.py::test_is_official_profile_match_rejects_videos_and_slugs PASSED [ 92%]
+tests/test_social_search.py::test_extract_candidate_entities_possessive_relations PASSED [ 94%]
+tests/test_social_search.py::test_is_event_or_non_human_entity_stadiums_and_venues PASSED [ 95%]
+tests/test_social_search.py::test_resolve_wikidata_socials_extracts_p18_portrait PASSED [ 97%]
+tests/test_social_search.py::test_regular_person_web_discovery_priority_when_no_official_profiles PASSED [ 98%]
+tests/test_social_search.py::test_search_gateway_rejects_wikidata_candidate_when_biometrics_mismatch PASSED [100%]
 
-======================= 40 passed in 145.40s =======================
+============================== 69 passed in 123.34s ==============================
 ```
 
 ---
